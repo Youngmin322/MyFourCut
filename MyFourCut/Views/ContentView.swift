@@ -7,7 +7,6 @@
 
 import SwiftUI
 import PhotosUI
-import SwiftData
 
 struct ContentView: View {
     // 선택된 사진들을 저장하는 상태 변수
@@ -17,17 +16,18 @@ struct ContentView: View {
     // 저장 완료 알림창 표시 여부를 제어하는 상태 변수
     @State private var showingSaveAlert = false
     // 선택된 배경 이미지를 저장하는 상태 변수
-    @State private var backgroundImage: String? = nil
+    @State private var backgroundImage: String? = "bg0"
     
-    let backgroundImages = ["bg1", "bg2", "bg3", "bg4", "bg5"]
+    let backgroundImages = ["bg0", "bg1", "bg2", "bg3", "bg4", "bg5"]
     
     var body: some View {
+        
         VStack {
             Text("나의 네컷")
-                .font(.title)
                 .bold()
+                .font(.custom("BM JUA OTF", size: 40))
         }
-
+        
         FrameImages(displayedImages: $displayedImages,
                     backgroundImage: backgroundImage)
         .frame(width: 300, height: 500)
@@ -65,8 +65,8 @@ struct ContentView: View {
                 matching: .images
             ) {
                 Text("사진 고르기")
+                    .font(.custom("BM JUA OTF", size: 20))
                     .padding()
-                    .bold()
                     .foregroundStyle(.white)
                     .background(Color.black)
                     .cornerRadius(10)
@@ -76,8 +76,8 @@ struct ContentView: View {
                 savePhoto()
             }) {
                 Text("저장하기")
+                    .font(.custom("BM JUA OTF", size: 20))
                     .padding()
-                    .bold()
                     .foregroundColor(.white)
                     .background(Color.black)
                     .cornerRadius(10)
@@ -86,6 +86,11 @@ struct ContentView: View {
                 Task {
                     await loadTransferable()
                 }
+            }
+            .alert("저장 완료", isPresented: $showingSaveAlert) {
+                Button("확인", role: .cancel) { }
+            } message: {
+                Text("이미지가 앨범에 저장되었습니다.")
             }
         }
     }
@@ -109,10 +114,21 @@ struct ContentView: View {
     func savePhoto() {
         let renderer = ImageRenderer(content: ZStack {
             FrameImages(displayedImages: $displayedImages,
-                        backgroundImage: backgroundImage)
+                        backgroundImage: backgroundImage,
+                        showCloseButton: false)
             .frame(width: 300, height: 500)
+            .background(Color.white)
+            .background(
+                       Rectangle()
+                           .stroke(Color.black, lineWidth: 1)
+                   )
         })
         renderer.scale = UIScreen.main.scale
+        
+        if let uiImage = renderer.uiImage {
+            UIImageWriteToSavedPhotosAlbum(uiImage, nil, nil, nil)
+            showingSaveAlert = true
+        }
     }
 }
         

@@ -9,11 +9,13 @@ import SwiftUI
 
 struct FrameImages: View {
     @Binding var displayedImages: [Image?]
-    
     var backgroundImage: String?
+    var showCloseButton: Bool = true
     
     var body: some View {
         ZStack {
+            Color.white
+                .ignoresSafeArea()
             // 선택된 배경 이미지 표시
             if let bgImage = backgroundImage, let uiImage = UIImage(named: bgImage) {
                 Image(uiImage: uiImage)
@@ -35,6 +37,17 @@ struct FrameImages: View {
                                         .scaledToFill()
                                         .frame(width: 100, height: 160)
                                         .clipped()
+                                    
+                                    if showCloseButton {
+                                        Button(action: {
+                                            displayedImages[index] = nil
+                                        }) {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .foregroundStyle(.black)
+                                                .frame(width: 24, height: 24)
+                                        }
+                                        .offset(x: -50, y: -78)
+                                    }
                                 }
                             } else {
                                 Rectangle()

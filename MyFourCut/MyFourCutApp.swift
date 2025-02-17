@@ -25,7 +25,7 @@ struct MyFourCutApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            StartView()
         }
         .modelContainer(sharedModelContainer)
     }

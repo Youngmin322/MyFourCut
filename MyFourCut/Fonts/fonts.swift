@@ -9,4 +9,5 @@ import SwiftUI
 
 extension Font {
     static let BMJUA: Font = .custom("BMJUA_otf", size: 40)
+    static let BMDOHYEON: Font = .custom("BMJUA_otf", size: 40)
 }
