@@ -20,6 +20,10 @@ struct ContentView: View {
     
     let backgroundImages = ["bg0", "bg1", "bg2", "bg3", "bg4", "bg5"]
     
+    init(initialImages: [Image?]? = nil) {
+        _displayedImages = State(initialValue: initialImages ?? Array(repeating: nil, count: 4))
+    }
+    
     var body: some View {
         
         VStack {
