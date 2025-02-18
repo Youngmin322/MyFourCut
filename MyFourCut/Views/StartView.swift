@@ -20,9 +20,8 @@ struct StartView: View {
                 VStack(spacing: 20) {
                     NavigationLink(value: 1) {
                         Text("촬영하기")
-                            .font(.custom("BM JUA OTF", size: 20))
+                            .font(.system(size: 20, weight: .semibold))
                             .frame(maxWidth: 250, maxHeight: 50)
-                            .bold()
                             .foregroundColor(.white)
                             .background(Color.black)
                             .cornerRadius(10)
@@ -30,9 +29,8 @@ struct StartView: View {
                     
                     NavigationLink(value: 2) {
                         Text("네컷 바로 만들기")
-                            .font(.custom("BM JUA OTF", size: 20))
+                            .font(.system(size: 20, weight: .semibold))
                             .frame(maxWidth: 250, maxHeight: 50)
-                            .bold()
                             .foregroundColor(.white)
                             .background(Color.black)
                             .cornerRadius(10)
