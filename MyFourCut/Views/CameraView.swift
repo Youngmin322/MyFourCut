@@ -1,7 +1,6 @@
 import SwiftUI
-import Photos
+import PhotosUI
 import AVFoundation
-
 
 /// 카메라 화면을 표시하는 뷰
 struct CameraView: View {
@@ -90,6 +89,9 @@ struct CameraView: View {
         .task {
             await camera.checkPermissions()
         }
+        .onDisappear {
+            displayedImages = Array(repeating: nil, count: 4)
+        }
     }
 }
 
@@ -118,7 +120,7 @@ class CameraModel: NSObject {  // NSObject 상속 추가
     private let output = AVCapturePhotoOutput() // 사진 출력
     private var photoCompletion: ((UIImage) -> Void)? // 촬영 후 콜백 함수
 
-    override init() {  // override 키워드 추가
+    override init() {
         super.init()   // NSObject의 초기화 메서드 호출
         Task { await setupSession() }
     }

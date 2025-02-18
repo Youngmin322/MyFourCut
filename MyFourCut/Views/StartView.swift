@@ -8,8 +8,8 @@
 import SwiftUI
 
 struct StartView: View {
-    
     @State private var tag: Int? = nil
+    @State private var displayedImages: [Image?] = Array(repeating: nil, count: 4)
     
     var body: some View {
         NavigationStack {
@@ -18,7 +18,7 @@ struct StartView: View {
                     .ignoresSafeArea()
                 
                 NavigationLink(value: 1) {
-                    Text("촬영하기") 
+                    Text("촬영하기")
                         .font(.custom("BM JUA OTF", size: 20))
                         .frame(maxWidth: 250, maxHeight: 50)
                         .bold()
@@ -40,7 +40,7 @@ struct StartView: View {
             .navigationTitle("")
             .navigationDestination(for: Int.self) { value in
                 if value == 1 {
-                    CameraView(displayedImages: .constant([nil, nil, nil, nil]))
+                    CameraView(displayedImages: $displayedImages)
                 } else {
                     ContentView()
                 }
