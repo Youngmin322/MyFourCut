@@ -25,66 +25,72 @@ struct ContentView: View {
     }
     
     var body: some View {
-        
-        VStack {
-            Text("나의 네컷")
-                .bold()
-                .font(.custom("BM JUA OTF", size: 40))
-        }
-        
-        FrameImages(displayedImages: $displayedImages,
-                    backgroundImage: backgroundImage)
-        .frame(width: 300, height: 500)
-        .background(
-            Rectangle()
-                .stroke(Color.black, lineWidth: 1)
-        )
-        
-        // 프레임 필터 스크롤 뷰
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack {
-                ForEach(backgroundImages, id: \.self) { imageName in
-                    Button(action: {
-                        backgroundImage = imageName
-                    }) {
-                        Image(imageName)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 80, height: 50)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.black, lineWidth: backgroundImage == imageName ? 3 : 1)
-                            )
+            ZStack {
+                Color.white.ignoresSafeArea() // 다크 모드에서도 배경을 항상 흰색으로 설정
+                
+                VStack(spacing: 20) { // 버튼과 요소 간 간격 추가
+                    Text("나의 네컷")
+                        .bold()
+                        .foregroundColor(.black)
+                        .font(.custom("BM JUA OTF", size: 40))
+                    
+                    FrameImages(displayedImages: $displayedImages, backgroundImage: backgroundImage)
+                        .frame(width: 300, height: 500)
+                        .background(Color.white) // 프레임 내부도 흰색 유지
+                        .overlay(
+                            Rectangle()
+                                .stroke(Color.black, lineWidth: 1)
+                        )
+                    
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack {
+                            ForEach(backgroundImages, id: \.self) { imageName in
+                                Button(action: {
+                                    backgroundImage = imageName
+                                }) {
+                                    Image(imageName)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 80, height: 50)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(Color.black, lineWidth: backgroundImage == imageName ? 3 : 1)
+                                        )
+                                }
+                            }
+                        }
+                        .padding()
+                    }
+                    .background(Color.white) // 스크롤 뷰 배경도 흰색
+                    
+                    HStack(spacing: 20) { // 버튼 간격 추가
+                        PhotosPicker(
+                            selection: $selectedPhotos,
+                            maxSelectionCount: 4,
+                            matching: .images
+                        ) {
+                            Text("사진 고르기")
+                                .font(.custom("BM JUA OTF", size: 20))
+                                .padding()
+                                .foregroundStyle(.white)
+                                .background(Color.black)
+                                .cornerRadius(10)
+                        }
+                        
+                        Button(action: {
+                            savePhoto()
+                        }) {
+                            Text("저장하기")
+                                .font(.custom("BM JUA OTF", size: 20))
+                                .padding()
+                                .foregroundColor(.white)
+                                .background(Color.black)
+                                .cornerRadius(10)
+                        }
                     }
                 }
-            }
-            .padding()
-        }
-        
-        HStack(spacing: 20) {
-            PhotosPicker(
-                selection: $selectedPhotos,
-                maxSelectionCount: 4,
-                matching: .images
-            ) {
-                Text("사진 고르기")
-                    .font(.custom("BM JUA OTF", size: 20))
-                    .padding()
-                    .foregroundStyle(.white)
-                    .background(Color.black)
-                    .cornerRadius(10)
-            }
-            
-            Button(action: {
-                savePhoto()
-            }) {
-                Text("저장하기")
-                    .font(.custom("BM JUA OTF", size: 20))
-                    .padding()
-                    .foregroundColor(.white)
-                    .background(Color.black)
-                    .cornerRadius(10)
+                .padding(.vertical, 20) // 전체 레이아웃 정렬 유지
             }
             .onChange(of: selectedPhotos) { _, _ in
                 Task {
@@ -97,46 +103,45 @@ struct ContentView: View {
                 Text("이미지가 앨범에 저장되었습니다.")
             }
         }
-    }
-    
-    func loadTransferable() async {
-        for (index, photoItem) in selectedPhotos.prefix(4).enumerated() {
-            do {
-                if let imageData = try await photoItem.loadTransferable(type: Data.self),
-                    let uiImage = UIImage(data: imageData) {
-                    await MainActor.run {
-                        displayedImages[index] = Image(uiImage: uiImage)
+        
+        func loadTransferable() async {
+            for (index, photoItem) in selectedPhotos.prefix(4).enumerated() {
+                do {
+                    if let imageData = try await photoItem.loadTransferable(type: Data.self),
+                       let uiImage = UIImage(data: imageData) {
+                        await MainActor.run {
+                            displayedImages[index] = Image(uiImage: uiImage)
+                        }
                     }
+                } catch {
+                    print("이미지 로드 실패: \(error)")
                 }
-            } catch {
-                print("이미지 로드 실패: \(error)")
+            }
+            selectedPhotos.removeAll()
+        }
+        
+        func savePhoto() {
+            let renderer = ImageRenderer(content: ZStack {
+                FrameImages(displayedImages: $displayedImages,
+                            backgroundImage: backgroundImage,
+                            showCloseButton: false)
+                .frame(width: 300, height: 500)
+                .background(Color.white)
+                .overlay(
+                    Rectangle()
+                        .stroke(Color.black, lineWidth: 1)
+                )
+            })
+            renderer.scale = UIScreen.main.scale
+            
+            if let uiImage = renderer.uiImage {
+                UIImageWriteToSavedPhotosAlbum(uiImage, nil, nil, nil)
+                showingSaveAlert = true
             }
         }
-        selectedPhotos.removeAll()
     }
-    
-    func savePhoto() {
-        let renderer = ImageRenderer(content: ZStack {
-            FrameImages(displayedImages: $displayedImages,
-                        backgroundImage: backgroundImage,
-                        showCloseButton: false)
-            .frame(width: 300, height: 500)
-            .background(Color.white)
-            .background(
-                       Rectangle()
-                           .stroke(Color.black, lineWidth: 1)
-                   )
-        })
-        renderer.scale = UIScreen.main.scale
-        
-        if let uiImage = renderer.uiImage {
-            UIImageWriteToSavedPhotosAlbum(uiImage, nil, nil, nil)
-            showingSaveAlert = true
-        }
+            
+    #Preview {
+        ContentView()
+            .modelContainer(for: Item.self, inMemory: true)
     }
-}
-        
-#Preview {
-    ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
-}
