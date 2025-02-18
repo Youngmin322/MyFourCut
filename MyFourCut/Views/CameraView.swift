@@ -219,7 +219,6 @@ class CameraModel: NSObject {  // NSObject 상속 추가
         photoCompletion = completion
         let settings = AVCapturePhotoSettings()
         output.capturePhoto(with: settings, delegate: self)
-        print("못된 것")
     }
 }
 
