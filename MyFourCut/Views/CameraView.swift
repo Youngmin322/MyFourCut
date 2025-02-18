@@ -1,5 +1,4 @@
 import SwiftUI
-import PhotosUI
 import AVFoundation
 
 /// 카메라 화면을 표시하는 뷰
@@ -90,7 +89,7 @@ struct CameraView: View {
             await camera.checkPermissions()
         }
         .onDisappear {
-            displayedImages = Array(repeating: nil, count: 4)
+            displayedImages = Array(repeating: nil, count: 4) // 배열 초기화
         }
     }
 }
