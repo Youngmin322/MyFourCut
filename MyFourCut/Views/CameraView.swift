@@ -6,12 +6,24 @@ struct CameraView: View {
     @Binding var displayedImages: [Image?]
     @Environment(\.dismiss) var dismiss
     @State private var shouldNavigateToContent = false
+    @State private var countDown = 5
+    @State private var isCountingDown = false
+    @State private var photoCount = 0
     
     var body: some View {
         ZStack {
             // 카메라 미리보기 화면
             CameraPreview(session: camera.session)
                 .ignoresSafeArea()
+            
+            if isCountingDown {
+                Text("\(countDown)")
+                    .font(.system(size: 100, weight: .bold))
+                    .bold()
+                    .foregroundColor(.red)
+                    .padding()
+                    .transition(.scale)
+            }
             
             VStack {
                 Spacer()
@@ -54,6 +66,7 @@ struct CameraView: View {
                                 newImages[firstEmpty] = Image(uiImage: image)
                                 displayedImages = newImages
                             }
+                            countDown = 5
                         }
                     } label: {
                         Circle()
@@ -80,6 +93,7 @@ struct CameraView: View {
         }
         .task {
             await camera.checkPermissions()
+            startAutoCapture()
         }
         .onDisappear {
             displayedImages = Array(repeating: nil, count: 4)
@@ -90,6 +104,43 @@ struct CameraView: View {
         .onChange(of: displayedImages) { _, newImages in
             if !newImages.contains(where: { $0 == nil }) {
                 shouldNavigateToContent = true
+            }
+        }
+    }
+    
+    private func startAutoCapture() {
+        photoCount = 0
+        captureNextPhoto()
+    }
+    
+    private func captureNextPhoto() {
+        if photoCount >= 4 { return } // 사진 4장을 다 찍으면 종료
+        
+        isCountingDown = true
+        countDown = 5
+        
+        Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
+            if countDown > 0 {
+                countDown -= 1
+            } else {
+                timer.invalidate()
+                isCountingDown = false
+                capturePhoto()
+            }
+        }
+    }
+        
+    private func capturePhoto() {
+        camera.capturePhoto { image in
+            if let firstEmpty = displayedImages.firstIndex(where: { $0 == nil }) {
+                var newImages = displayedImages
+                newImages[firstEmpty] = Image(uiImage: image)
+                displayedImages = newImages
+                photoCount += 1
+                
+                if photoCount < 4 {
+                    captureNextPhoto()
+                }
             }
         }
     }
@@ -172,7 +223,7 @@ class CameraModel: NSObject {
 
     func switchCamera() {
         guard let currentInput = input else { return }
-        let newPosition: AVCaptureDevice.Position = (camera?.position == .back) ? .front : .back
+        let newPosition: AVCaptureDevice.Position = (camera?.position == .front) ? .back : .front
         
         Task {
             guard let newCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: newPosition),
@@ -209,8 +260,4 @@ extension CameraModel: AVCapturePhotoCaptureDelegate {
             }
         }
     }
-}
-
-#Preview {
-    CameraView(displayedImages: .constant([nil, nil, nil, nil]))
 }

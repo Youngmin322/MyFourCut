@@ -71,7 +71,7 @@ struct ContentView: View {
                             matching: .images
                         ) {
                             Text("사진 고르기")
-                                .font(.system(size: 20, weight: .semibold))
+                                .font(.system(size: 17, weight: .semibold))
                                 .bold()
                                 .padding()
                                 .foregroundStyle(.white)
@@ -83,7 +83,7 @@ struct ContentView: View {
                             savePhoto()
                         }) {
                             Text("저장하기")
-                                .font(.system(size: 20, weight: .semibold))
+                                .font(.system(size: 17, weight: .semibold))
                                 .bold()
                                 .padding()
                                 .foregroundColor(.white)
