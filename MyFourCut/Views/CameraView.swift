@@ -202,7 +202,7 @@ class CameraModel: NSObject {
         do {
             session.beginConfiguration()
             
-            camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
+            camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
             
             if let camera {
                 input = try AVCaptureDeviceInput(device: camera)
