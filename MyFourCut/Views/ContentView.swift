@@ -29,10 +29,28 @@ struct ContentView: View {
                 Color.white.ignoresSafeArea() // 다크 모드에서도 배경을 항상 흰색으로 설정
                 
                 VStack(spacing: 20) { // 버튼과 요소 간 간격 추가
-                    Text("나의 네컷")
-                        .bold()
-                        .foregroundColor(.black)
-                        .font(.custom("BM JUA OTF", size: 40))
+                    ZStack {
+                        HStack {
+                            Spacer()
+                            Text("나의 네컷")
+                                .bold()
+                                .foregroundColor(.black)
+                                .font(.custom("BM JUA OTF", size: 40))
+                            Spacer()
+                        }
+                        
+                        HStack {
+                            Spacer()
+                            Button {
+                                print("QR")
+                            } label: {
+                                Image(systemName: "qrcode")
+                                    .foregroundStyle(.black)
+                                    .font(.system(size: 30))
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
                     
                     FrameImages(displayedImages: $displayedImages, backgroundImage: backgroundImage)
                         .frame(width: 300, height: 500)
