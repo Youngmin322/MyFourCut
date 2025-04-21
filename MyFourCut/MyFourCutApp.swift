@@ -6,29 +6,19 @@
 //
 
 import SwiftUI
-import Firebase
 import SwiftData
 
-import FirebaseCore
-
-
 class AppDelegate: NSObject, UIApplicationDelegate {
-  func application(_ application: UIApplication,
-                   didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-    FirebaseApp.configure()
-
-    return true
-  }
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        return true
+    }
 }
 
 @main
 struct MyFourCutApp: App {
-    
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
-    
-    init() {
-        FirebaseApp.configure() // Firebase 초기화
-    }
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,
