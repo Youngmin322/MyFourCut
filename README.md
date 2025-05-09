@@ -54,7 +54,7 @@ CouponWallet은 디지털 기프티콘을 관리하기 위한 종합적인 iOS �
 - **AVFoundation**: 카메라 기능 제어
 - **CoreImage**: QR 코드 생성
 - **UIKit**: 이미지 합성 처리 일부
-- **PhotosUI: 갤러리에서 사진 가져오기
+- **PhotosUI**: 갤러리에서 사진 가져오기
 
 ### 주요 구성 요소
 - `CameraView.swift`: 카메라 세션 및 촬영
