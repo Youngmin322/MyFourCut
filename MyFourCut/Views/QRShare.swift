@@ -91,7 +91,7 @@ struct QRShare: View {
         
         // 이미지 압축
         let imageWithoutAlpha = removeAlpha(from: fourCutImage)
-
+        
         guard let imageData = imageWithoutAlpha.jpegData(compressionQuality: 0.7) else {
             errorMessage = "이미지 변환에 실패했습니다."
             showError = true
@@ -196,4 +196,6 @@ struct ShareSheet: UIViewControllerRepresentable {
     }
     
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+    struct QRShare {
+    }
 }

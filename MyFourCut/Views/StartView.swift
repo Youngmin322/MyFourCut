@@ -17,12 +17,7 @@ struct StartView: View {
                 Color.white
                     .ignoresSafeArea()
                 
-                VStack(spacing: 10) {
-                    Image("AppLogo")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 300, height: 300)
-                    
+                VStack(spacing: 20) {
                     NavigationLink(value: 1) {
                         Text("촬영하기")
                             .font(.system(size: 20, weight: .semibold))
