@@ -101,6 +101,8 @@ struct CameraView: View {
         }
         .onDisappear {
             displayedImages = Array(repeating: nil, count: 4)
+            isCountingDown = false
+            countDown = 0
         }
         .navigationDestination(isPresented: $shouldNavigateToContent) {
             ContentView(initialImages: displayedImages)
@@ -129,7 +131,11 @@ struct CameraView: View {
         countDown = 5
         
         Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
-            if countDown > 0 {
+            if !isCountingDown {
+                timer.invalidate()
+                return
+            }
+            if countDown > 1 {
                 countDown -= 1
             } else {
                 timer.invalidate()
