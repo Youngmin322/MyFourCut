@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import AVFoundation
 
 struct CameraView: View {
@@ -50,6 +51,7 @@ struct CameraView: View {
                 HStack(spacing: 60) {
                     // 닫기 버튼
                     Button {
+                        playHaptic(style: .medium)
                         dismiss()
                     } label: {
                         Image(systemName: "xmark.circle.fill")
@@ -59,6 +61,7 @@ struct CameraView: View {
                     
                     // 사진 촬영 버튼
                     Button {
+                        playHaptic(style: .medium)
                         camera.capturePhoto { image in
                             // 첫 번째 비어 있는 공간에 사진 추가
                             if let firstEmpty = displayedImages.firstIndex(where: { $0 == nil }) {
@@ -81,6 +84,7 @@ struct CameraView: View {
                     
                     // 카메라 전환 버튼
                     Button {
+                        playHaptic(style: .medium)
                         camera.switchCamera()
                     } label: {
                         Image(systemName: "camera.rotate.fill")
@@ -108,6 +112,11 @@ struct CameraView: View {
         }
     }
     
+    func playHaptic(style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {
+        let generator = UIImpactFeedbackGenerator(style: style)
+        generator.impactOccurred()
+    }
+    
     private func startAutoCapture() {
         photoCount = 0
         captureNextPhoto()
@@ -131,6 +140,7 @@ struct CameraView: View {
     }
         
     private func capturePhoto() {
+        playHaptic(style: .medium)
         camera.capturePhoto { image in
             if let firstEmpty = displayedImages.firstIndex(where: { $0 == nil }) {
                 var newImages = displayedImages
