@@ -22,6 +22,8 @@ struct ContentView: View {
     
     @State private var tempImageForSharing: UIImage?
     
+    @Environment(\.dismiss) private var dismiss
+    
     let backgroundImages = ["bg0", "bg1", "bg2", "bg3", "bg4", "bg5"]
     
     init(initialImages: [Image?]? = nil) {
@@ -33,33 +35,38 @@ struct ContentView: View {
             Color.white.ignoresSafeArea() // 다크 모드에서도 배경을 항상 흰색으로 설정
             
             VStack(spacing: 20) { // 버튼과 요소 간 간격 추가
-                ZStack {
-                    HStack {
-                        Spacer()
-                        Text("나의 네컷")
-                            .bold()
-                            .foregroundColor(.black)
-                            .font(.custom("BM JUA OTF", size: 40))
-                        Spacer()
+                HStack {
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Image(systemName: "chevron.left")
+                            .foregroundColor(.gray)
+                            .font(.system(size: 20, weight: .medium))
                     }
-                    
-                    HStack {
-                        Spacer()
-                        Button {
-                            savePhotoForSharing()
-                        } label: {
-                            Image(systemName: "qrcode")
-                                .foregroundStyle(.black)
-                                .font(.system(size: 30))
-                        }
-                        .sheet(isPresented: $showingQRShare) {
-                            if let imageToShare = tempImageForSharing {
-                                QRShare(fourCutImage: imageToShare)
-                            }
+
+                    Spacer()
+
+                    Text("나의 네컷")
+                        .bold()
+                        .foregroundColor(.black)
+                        .font(.custom("BM JUA OTF", size: 40))
+
+                    Spacer()
+
+                    Button {
+                        savePhotoForSharing()
+                    } label: {
+                        Image(systemName: "qrcode")
+                            .foregroundStyle(.black)
+                            .font(.system(size: 30))
+                    }
+                    .sheet(isPresented: $showingQRShare) {
+                        if let imageToShare = tempImageForSharing {
+                            QRShare(fourCutImage: imageToShare)
                         }
                     }
-                    .padding(.horizontal)
                 }
+                .padding(.horizontal)
                 
                 FrameImages(displayedImages: $displayedImages, backgroundImage: backgroundImage)
                     .frame(width: 300, height: 500)
@@ -131,6 +138,7 @@ struct ContentView: View {
         } message: {
             Text("이미지가 앨범에 저장되었습니다.")
         }
+        .navigationBarBackButtonHidden(true)
     }
     
     func loadTransferable() async {

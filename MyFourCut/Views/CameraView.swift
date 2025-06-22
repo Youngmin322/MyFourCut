@@ -106,6 +106,18 @@ struct CameraView: View {
         .navigationDestination(isPresented: $shouldNavigateToContent) {
             ContentView(initialImages: displayedImages)
         }
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: {
+                    dismiss()
+                }) {
+                    Image(systemName: "chevron.left")
+                        .foregroundColor(.gray)
+                        .font(.system(size: 20, weight: .medium))
+                }
+            }
+        }
         .onChange(of: displayedImages) { _, newImages in
             if !newImages.contains(where: { $0 == nil }) {
                 shouldNavigateToContent = true
