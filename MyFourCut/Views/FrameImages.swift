@@ -24,7 +24,7 @@ struct FrameImages: View {
                     .frame(width: 300, height: 500)
                     .clipped()
             }
-
+            
             VStack {
                 ForEach(0..<2, id: \.self) { row in
                     HStack {
@@ -59,10 +59,10 @@ struct FrameImages: View {
                 }
                 Spacer().frame(height: 90)
             }
-
+            
             // 테두리 추가
             Rectangle()
-                .stroke(Color.black, lineWidth: 3) 
+                .stroke(Color.black, lineWidth: 3)
                 .frame(width: 300, height: 500)
         }
     }

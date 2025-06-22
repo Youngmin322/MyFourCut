@@ -10,6 +10,7 @@ struct CameraView: View {
     @State private var countDown = 5
     @State private var isCountingDown = false
     @State private var photoCount = 0
+    @State private var cameraAccessDenied = false
     
     var body: some View {
         ZStack {
@@ -28,7 +29,6 @@ struct CameraView: View {
             
             VStack {
                 Spacer()
-                
                 // 찍은 사진을 보여주는 미리보기 (최대 4장)
                 HStack {
                     ForEach(0..<4) { index in
@@ -96,8 +96,7 @@ struct CameraView: View {
             }
         }
         .task {
-            await camera.checkPermissions()
-            startAutoCapture()
+            await checkCameraAccess()
         }
         .onDisappear {
             displayedImages = Array(repeating: nil, count: 4)
@@ -110,6 +109,42 @@ struct CameraView: View {
         .onChange(of: displayedImages) { _, newImages in
             if !newImages.contains(where: { $0 == nil }) {
                 shouldNavigateToContent = true
+            }
+        }
+        .overlay {
+            if cameraAccessDenied {
+                ZStack {
+                    Color.black.opacity(0.8)
+                        .ignoresSafeArea()
+                    VStack(spacing: 20) {
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 50))
+                            .foregroundColor(.white)
+                        
+                        Text("카메라 접근이 차단되어 있어요")
+                            .font(.title3)
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+                        
+                        Button {
+                            if let settingsURL = URL(string: UIApplication.openSettingsURLString),
+                               UIApplication.shared.canOpenURL(settingsURL) {
+                                UIApplication.shared.open(settingsURL)
+                            }
+                        } label: {
+                            Text("설정에서 권한 허용하기")
+                                .foregroundColor(.black)
+                                .padding(.vertical, 10)
+                                .padding(.horizontal, 20)
+                                .background(Color.white)
+                                .cornerRadius(8)
+                        }
+                    }
+                    .padding()
+                    .background(Color.black.opacity(0.6))
+                    .cornerRadius(16)
+                    .padding()
+                }
             }
         }
     }
@@ -144,7 +179,7 @@ struct CameraView: View {
             }
         }
     }
-        
+    
     private func capturePhoto() {
         playHaptic(style: .medium)
         camera.capturePhoto { image in
@@ -158,6 +193,24 @@ struct CameraView: View {
                     captureNextPhoto()
                 }
             }
+        }
+    }
+    
+    private func checkCameraAccess() async {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .notDetermined:
+            let granted = await AVCaptureDevice.requestAccess(for: .video)
+            if granted {
+                await camera.checkPermissions()
+                startAutoCapture()
+            } else {
+                cameraAccessDenied = true
+            }
+        case .authorized:
+            await camera.checkPermissions()
+            startAutoCapture()
+        default:
+            cameraAccessDenied = true
         }
     }
 }
@@ -184,7 +237,7 @@ class CameraModel: NSObject {
     private var input: AVCaptureDeviceInput?
     private let output = AVCapturePhotoOutput()
     private var photoCompletion: ((UIImage) -> Void)?
-
+    
     override init() {
         super.init()
         Task { await setupSession() }
@@ -205,7 +258,7 @@ class CameraModel: NSObject {
             print("권한이 거부되었습니다.")
         }
     }
-
+    
     private func startSession() async {
         if !session.isRunning {
             await Task.detached {
@@ -213,7 +266,7 @@ class CameraModel: NSObject {
             }.value
         }
     }
-
+    
     private func setupSession() async {
         do {
             session.beginConfiguration()
@@ -236,7 +289,7 @@ class CameraModel: NSObject {
             print("카메라 설정 오류: \(error.localizedDescription)")
         }
     }
-
+    
     func switchCamera() {
         guard let currentInput = input else { return }
         let newPosition: AVCaptureDevice.Position = (camera?.position == .front) ? .back : .front
@@ -259,7 +312,7 @@ class CameraModel: NSObject {
             }
         }
     }
-
+    
     func capturePhoto(completion: @escaping (UIImage) -> Void) {
         photoCompletion = completion
         let settings = AVCapturePhotoSettings()
