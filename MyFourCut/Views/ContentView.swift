@@ -17,10 +17,6 @@ struct ContentView: View {
     @State private var showingSaveAlert = false
     // 선택된 배경 이미지를 저장하는 상태 변수
     @State private var backgroundImage: String? = "bg0"
-    // QR 공유 시트 표시 여부
-    @State private var showingQRShare = false
-    
-    @State private var tempImageForSharing: UIImage?
     
     @Environment(\.dismiss) private var dismiss
     
@@ -50,22 +46,26 @@ struct ContentView: View {
                         .bold()
                         .foregroundColor(.black)
                         .font(.custom("BM JUA OTF", size: 40))
-
-                    Spacer()
-
-                    Button {
-                        savePhotoForSharing()
-                    } label: {
-                        Image(systemName: "qrcode")
-                            .foregroundStyle(.black)
-                            .font(.system(size: 30))
-                    }
-                    .sheet(isPresented: $showingQRShare) {
-                        if let imageToShare = tempImageForSharing {
-                            QRShare(fourCutImage: imageToShare)
-                        }
-                    }
+                        .frame(maxWidth: .infinity)
+                        .multilineTextAlignment(.center)
+                        .overlay(
+                            HStack {
+                                Spacer()
+                                HStack(spacing: 16) {
+                                    Button {
+                                        sharePhoto()
+                                    } label: {
+                                        Image(systemName: "square.and.arrow.up")
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 30, height: 30)
+                                            .foregroundStyle(.black)
+                                    }
+                                }
+                            }
+                        )
                 }
+                .frame(height: 40)
                 .padding(.horizontal)
                 
                 FrameImages(displayedImages: $displayedImages, backgroundImage: backgroundImage)
@@ -177,7 +177,7 @@ struct ContentView: View {
         }
     }
     
-    func savePhotoForSharing() {
+    func sharePhoto() {
         let renderer = ImageRenderer(content: ZStack {
             FrameImages(displayedImages: $displayedImages,
                         backgroundImage: backgroundImage,
@@ -192,8 +192,11 @@ struct ContentView: View {
         renderer.scale = UIScreen.main.scale
         
         if let uiImage = renderer.uiImage {
-            self.tempImageForSharing = uiImage
-            self.showingQRShare = true
+            let activityVC = UIActivityViewController(activityItems: [uiImage], applicationActivities: nil)
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let rootVC = windowScene.windows.first?.rootViewController {
+                rootVC.present(activityVC, animated: true, completion: nil)
+            }
         }
     }
 }
