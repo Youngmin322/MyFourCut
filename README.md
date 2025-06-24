@@ -1,8 +1,8 @@
-# CouponWallet  
+# MyFourCut 
 ![Swift](https://img.shields.io/badge/Swift-5.9-F05138?logo=swift)
 ![Platform](https://img.shields.io/badge/Platforms-iOS%2018.0+-007AFF?logo=apple)
 
-CouponWallet은 디지털 기프티콘을 관리하기 위한 종합적인 iOS 애플리케이션입니다. 이 앱을 통해 사용자는 디지털 쿠폰을 스캔하고, 저장하고, 정리하며, 한 곳에서 편리하게 관리할 수 있습니다.
+MyFourCut은 나만의 포토부스를 손안에 담은 iOS 애플리케이션으로, 셀카 촬영부터 꾸미기, 저장까지 한 번에 즐길 수 있는 디지털 인생네컷 경험을 제공합니다.
 
 ## 개요
 
@@ -67,13 +67,8 @@ CouponWallet은 디지털 기프티콘을 관리하기 위한 종합적인 iOS �
 ### 기타 기능
 - 사진 촬영 후 앨범 저장
 - 저장된 이미지를 QR 코드로 변환하여 링크처럼 공유
-- 
 ---
 
-## 📷 스크린샷
-- 업데이트 예정
-
----
 
 ## 🚀 시작하기
 
@@ -114,7 +109,3 @@ CouponWallet은 디지털 기프티콘을 관리하기 위한 종합적인 iOS �
 - **SwiftUI와 UIKit 조합**: SwiftUI 기반이지만 UIKit을 함께 사용하는 복합 구조에서 관리 포인트를 분리하여 더 체계적인 구조로 개선하고 싶습니다.
 
 ---
-
-## 📝 라이선스
-
-본 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 사항은 LICENSE 파일을 참고하세요.
