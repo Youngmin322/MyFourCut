@@ -29,9 +29,9 @@ struct ContentView: View {
                             .foregroundColor(.gray)
                             .font(.system(size: 20, weight: .medium))
                     }
-
+                    
                     Spacer()
-
+                    
                     Text("나의 네컷")
                         .bold()
                         .foregroundColor(.black)
@@ -59,13 +59,13 @@ struct ContentView: View {
                 .padding(.horizontal)
                 
                 FrameImages(displayedImages: $viewModel.displayedImages,
-                           backgroundImage: viewModel.backgroundImage)
-                    .frame(width: 300, height: 500)
-                    .background(Color.white)
-                    .overlay(
-                        Rectangle()
-                            .stroke(Color.black, lineWidth: 1)
-                    )
+                            backgroundImage: viewModel.backgroundImage)
+                .frame(width: 300, height: 500)
+                .background(Color.white)
+                .overlay(
+                    Rectangle()
+                        .stroke(Color.black, lineWidth: 1)
+                )
                 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack {

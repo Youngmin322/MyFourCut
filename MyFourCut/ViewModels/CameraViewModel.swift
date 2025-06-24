@@ -100,11 +100,11 @@ class CameraViewModel: NSObject {
     
     func startCountdownAndCapture() {
         if frameModel.isComplete { return }
-
+        
         countdownModel.reset()
         countdownModel.start()
         countDown = countdownModel.currentCount
-
+        
         Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
             Task { @MainActor in
                 if self.countdownModel.tick() {

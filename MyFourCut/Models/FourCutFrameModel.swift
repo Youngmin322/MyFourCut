@@ -37,7 +37,6 @@ struct FourCutFrameModel {
         selectedBackground = background
     }
     
-    // ✅ ViewModel에서 필요한 추가 메서드들
     mutating func changeBackgroundByName(_ imageName: String) {
         if let background = BackgroundModel.defaultBackgrounds.first(where: { $0.imageName == imageName }) {
             selectedBackground = background

@@ -17,7 +17,6 @@ struct PhotoModel {
         self.image = Image(uiImage: uiImage)
     }
     
-    // ✅ Image에서 직접 생성할 때 사용 (UIImage 변환 실패 시)
     static func fromImage(_ image: Image) -> PhotoModel {
         return PhotoModel(image: image, originalUIImage: nil)
     }
@@ -28,7 +27,6 @@ struct PhotoModel {
     }
 }
 
-// ✅ Image를 UIImage로 변환하는 extension
 extension Image {
     func asUIImage() -> UIImage? {
         // SwiftUI Image를 UIImage로 변환하는 것은 복잡함
