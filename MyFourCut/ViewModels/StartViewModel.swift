@@ -8,10 +8,31 @@
 import SwiftUI
 
 @MainActor
-@Observable
 class StartViewModel {
-    var selectedPath: Int? = nil
-    var displayedImages: [Image?] = Array(repeating: nil, count: 4)
+    var displayedImages: [Image?] = []
+    private var navigationModel = AppNavigationModel()
+    private var frameModel = FourCutFrameModel()
+    
+    var selectedPath: Int? {
+        get {
+            switch navigationModel.currentDestination {
+            case .camera: return 1
+            case .content: return 2
+            default: return nil
+            }
+        }
+        set {
+            if let value = newValue {
+                switch value {
+                case 1: navigationModel.navigate(to: .camera)
+                case 2: navigationModel.navigate(to: .content)
+                default: navigationModel.reset()
+                }
+            } else {
+                navigationModel.reset()
+            }
+        }
+    }
     
     func navigateToCamera() {
         selectedPath = 1

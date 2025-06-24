@@ -12,14 +12,25 @@ import AVFoundation
 @MainActor
 @Observable
 class CameraViewModel: NSObject {
-    var shouldNavigateToContent = false
-    var countDown = 5
-    var isCountingDown = false
-    var photoCount = 0
-    var cameraAccessDenied = false
-    var displayedImages: [Image?] = Array(repeating: nil, count: 4)
-    
+    private var frameModel = FourCutFrameModel()
+    private var countdownModel = CountdownModel()
     private let cameraModel = CameraModel()
+    
+    var shouldNavigateToContent = false
+    var cameraAccessDenied = false
+    var displayedImages: [Image?] {
+        frameModel.displayedImages
+    }
+    
+    var countDown: Int = 5
+    
+    var isCountingDown: Bool {
+        countdownModel.isActive
+    }
+    
+    var photoCount: Int {
+        frameModel.filledCount
+    }
     
     var session: AVCaptureSession {
         cameraModel.session
@@ -62,18 +73,19 @@ class CameraViewModel: NSObject {
         cameraModel.capturePhoto { [weak self] image in
             guard let self = self else { return }
             Task { @MainActor in
-                if let firstEmpty = self.displayedImages.firstIndex(where: { $0 == nil }) {
-                    self.displayedImages[firstEmpty] = Image(uiImage: image)
+                let photo = PhotoModel(uiImage: image)
+                if self.frameModel.addPhoto(photo) {
+                    self.countdownModel.reset()
+                    self.countDown = self.countdownModel.currentCount
                 }
-                self.countDown = 5
             }
         }
     }
     
     func resetImages() {
-        displayedImages = Array(repeating: nil, count: 4)
-        isCountingDown = false
-        countDown = 0
+        frameModel.reset()
+        countdownModel.reset()
+        countDown = countdownModel.currentCount
     }
     
     func playHaptic(style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {
@@ -82,28 +94,50 @@ class CameraViewModel: NSObject {
     }
     
     private func startAutoCapture() {
-        photoCount = 0
+        frameModel.reset()
         captureNextPhoto()
     }
     
+    func startCountdownAndCapture() {
+        if frameModel.isComplete { return }
+
+        countdownModel.reset()
+        countdownModel.start()
+        countDown = countdownModel.currentCount
+
+        Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
+            Task { @MainActor in
+                if self.countdownModel.tick() {
+                    self.countDown = self.countdownModel.currentCount
+                    timer.invalidate()
+                    self.capturePhotoAuto()
+                } else {
+                    self.countDown = self.countdownModel.currentCount
+                }
+            }
+        }
+    }
+    
     private func captureNextPhoto() {
-        if photoCount >= 4 { return }
+        if frameModel.isComplete { return }
         
-        isCountingDown = true
-        countDown = 5
+        countdownModel.start()
+        countDown = countdownModel.currentCount
         
         Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
             Task { @MainActor in
-                if !self.isCountingDown {
+                if !self.countdownModel.isActive {
                     timer.invalidate()
                     return
                 }
-                if self.countDown > 1 {
-                    self.countDown -= 1
-                } else {
+                
+                if self.countdownModel.tick() {
+                    // 카운트다운 완료
                     timer.invalidate()
-                    self.isCountingDown = false
+                    self.countDown = self.countdownModel.currentCount
                     self.capturePhotoAuto()
+                } else {
+                    self.countDown = self.countdownModel.currentCount
                 }
             }
         }
@@ -114,11 +148,9 @@ class CameraViewModel: NSObject {
         cameraModel.capturePhoto { [weak self] image in
             guard let self = self else { return }
             Task { @MainActor in
-                if let firstEmpty = self.displayedImages.firstIndex(where: { $0 == nil }) {
-                    self.displayedImages[firstEmpty] = Image(uiImage: image)
-                    self.photoCount += 1
-                    
-                    if self.photoCount < 4 {
+                let photo = PhotoModel(uiImage: image)
+                if self.frameModel.addPhoto(photo) {
+                    if !self.frameModel.isComplete {
                         self.captureNextPhoto()
                     }
                 }

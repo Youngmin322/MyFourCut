@@ -5,13 +5,6 @@
 //  Created by 조영민 on 2/4/25.
 //
 
-//
-//  FrameImages.swift
-//  MyFourCut
-//
-//  Created by 조영민 on 2/4/25.
-//
-
 import SwiftUI
 
 struct FrameImages: View {
@@ -37,7 +30,7 @@ struct FrameImages: View {
                     HStack {
                         ForEach(0..<2, id: \.self) { column in
                             let index = row * 2 + column
-                            if let image = displayedImages[index] {
+                            if index < displayedImages.count, let image = displayedImages[index] {
                                 ZStack {
                                     image
                                         .resizable()

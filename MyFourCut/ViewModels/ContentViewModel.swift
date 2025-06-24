@@ -11,19 +11,21 @@ import PhotosUI
 @MainActor
 @Observable
 class ContentViewModel {
-    // 선택된 사진들을 저장하는 상태 변수
+    private var frameModel = FourCutFrameModel()
     var selectedPhotos: [PhotosPickerItem] = []
-    // 화면에 표시될 이미지들을 저장하는 상태 변수 (최대 4개)
-    var displayedImages: [Image?] = Array(repeating: nil, count: 4)
-    // 저장 완료 알림창 표시 여부를 제어하는 상태 변수
     var showingSaveAlert = false
-    // 선택된 배경 이미지를 저장하는 상태 변수
-    var backgroundImage: String? = "bg0"
+    var displayedImages: [Image?] = []
+    var backgroundImage: String? {
+        frameModel.selectedBackground.imageName
+    }
     
-    let backgroundImages = ["bg0", "bg1", "bg2", "bg3", "bg4", "bg5"]
+    let backgroundImages = BackgroundModel.defaultBackgrounds.map { $0.imageName }
     
     init(initialImages: [Image?]? = nil) {
-        displayedImages = initialImages ?? Array(repeating: nil, count: 4)
+        if let images = initialImages {
+            frameModel.setInitialImages(images)
+            self.displayedImages = frameModel.displayedImages
+        }
     }
     
     func loadTransferable() async {
@@ -31,13 +33,15 @@ class ContentViewModel {
             do {
                 if let imageData = try await photoItem.loadTransferable(type: Data.self),
                    let uiImage = UIImage(data: imageData) {
-                    displayedImages[index] = Image(uiImage: uiImage)
+                    let photo = PhotoModel(uiImage: uiImage)
+                    frameModel.setPhoto(photo, at: index)
                 }
             } catch {
                 print("이미지 로드 실패: \(error)")
             }
         }
         selectedPhotos.removeAll()
+        self.displayedImages = frameModel.displayedImages
     }
     
     func savePhoto() {
@@ -84,11 +88,11 @@ class ContentViewModel {
     }
     
     func selectBackgroundImage(_ imageName: String) {
-        backgroundImage = imageName
+        frameModel.changeBackgroundByName(imageName)
     }
     
     func removeImage(at index: Int) {
-        guard index < displayedImages.count else { return }
-        displayedImages[index] = nil
+        frameModel.removePhoto(at: index)
+        self.displayedImages = frameModel.displayedImages
     }
 }

@@ -10,18 +10,31 @@ import SwiftUI
 @MainActor
 @Observable
 class FrameImagesViewModel {
-    var displayedImages: [Image?]
-    var backgroundImage: String?
+    private var frameModel: FourCutFrameModel
+    
+    var displayedImages: [Image?] {
+        get { frameModel.displayedImages }
+        set { frameModel.setImages(newValue) }
+    }
+    
+    var backgroundImage: String? {
+        frameModel.selectedBackground.imageName
+    }
+    
     var showCloseButton: Bool
     
     init(displayedImages: [Image?], backgroundImage: String? = nil, showCloseButton: Bool = true) {
-        self.displayedImages = displayedImages
-        self.backgroundImage = backgroundImage
+        self.frameModel = FourCutFrameModel()
         self.showCloseButton = showCloseButton
+        
+        frameModel.setImages(displayedImages)
+        
+        if let bgName = backgroundImage {
+            frameModel.changeBackgroundByName(bgName)
+        }
     }
     
     func removeImage(at index: Int) {
-        guard index < displayedImages.count else { return }
-        displayedImages[index] = nil
+        frameModel.removePhoto(at: index)
     }
 }
