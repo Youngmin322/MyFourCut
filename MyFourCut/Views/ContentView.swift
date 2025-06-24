@@ -9,28 +9,18 @@ import SwiftUI
 import PhotosUI
 
 struct ContentView: View {
-    // 선택된 사진들을 저장하는 상태 변수
-    @State private var selectedPhotos: [PhotosPickerItem] = []
-    // 화면에 표시될 이미지들을 저장하는 상태 변수 (최대 4개)
-    @State private var displayedImages: [Image?] = Array(repeating: nil, count: 4)
-    // 저장 완료 알림창 표시 여부를 제어하는 상태 변수
-    @State private var showingSaveAlert = false
-    // 선택된 배경 이미지를 저장하는 상태 변수
-    @State private var backgroundImage: String? = "bg0"
-    
+    @State private var viewModel: ContentViewModel
     @Environment(\.dismiss) private var dismiss
     
-    let backgroundImages = ["bg0", "bg1", "bg2", "bg3", "bg4", "bg5"]
-    
     init(initialImages: [Image?]? = nil) {
-        _displayedImages = State(initialValue: initialImages ?? Array(repeating: nil, count: 4))
+        _viewModel = State(initialValue: ContentViewModel(initialImages: initialImages))
     }
     
     var body: some View {
         ZStack {
-            Color.white.ignoresSafeArea() // 다크 모드에서도 배경을 항상 흰색으로 설정
+            Color.white.ignoresSafeArea()
             
-            VStack(spacing: 20) { // 버튼과 요소 간 간격 추가
+            VStack(spacing: 20) {
                 HStack {
                     Button(action: {
                         dismiss()
@@ -53,7 +43,7 @@ struct ContentView: View {
                                 Spacer()
                                 HStack(spacing: 16) {
                                     Button {
-                                        sharePhoto()
+                                        viewModel.sharePhoto()
                                     } label: {
                                         Image(systemName: "square.and.arrow.up")
                                             .resizable()
@@ -68,9 +58,10 @@ struct ContentView: View {
                 .frame(height: 40)
                 .padding(.horizontal)
                 
-                FrameImages(displayedImages: $displayedImages, backgroundImage: backgroundImage)
+                FrameImages(displayedImages: $viewModel.displayedImages,
+                           backgroundImage: viewModel.backgroundImage)
                     .frame(width: 300, height: 500)
-                    .background(Color.white) // 프레임 내부도 흰색 유지
+                    .background(Color.white)
                     .overlay(
                         Rectangle()
                             .stroke(Color.black, lineWidth: 1)
@@ -78,9 +69,9 @@ struct ContentView: View {
                 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack {
-                        ForEach(backgroundImages, id: \.self) { imageName in
+                        ForEach(viewModel.backgroundImages, id: \.self) { imageName in
                             Button(action: {
-                                backgroundImage = imageName
+                                viewModel.selectBackgroundImage(imageName)
                             }) {
                                 Image(imageName)
                                     .resizable()
@@ -89,18 +80,18 @@ struct ContentView: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 8)
-                                            .stroke(Color.black, lineWidth: backgroundImage == imageName ? 3 : 1)
+                                            .stroke(Color.black, lineWidth: viewModel.backgroundImage == imageName ? 3 : 1)
                                     )
                             }
                         }
                     }
                     .padding()
                 }
-                .background(Color.white) // 스크롤 뷰 배경도 흰색
+                .background(Color.white)
                 
-                HStack(spacing: 20) { // 버튼 간격 추가
+                HStack(spacing: 20) {
                     PhotosPicker(
-                        selection: $selectedPhotos,
+                        selection: $viewModel.selectedPhotos,
                         maxSelectionCount: 4,
                         matching: .images
                     ) {
@@ -114,7 +105,7 @@ struct ContentView: View {
                     }
                     
                     Button(action: {
-                        savePhoto()
+                        viewModel.savePhoto()
                     }) {
                         Text("저장하기")
                             .font(.system(size: 17, weight: .semibold))
@@ -126,82 +117,18 @@ struct ContentView: View {
                     }
                 }
             }
-            .padding(.vertical, 20) // 전체 레이아웃 정렬 유지
+            .padding(.vertical, 20)
         }
-        .onChange(of: selectedPhotos) { _, _ in
+        .onChange(of: viewModel.selectedPhotos) { _, _ in
             Task {
-                await loadTransferable()
+                await viewModel.loadTransferable()
             }
         }
-        .alert("저장 완료", isPresented: $showingSaveAlert) {
+        .alert("저장 완료", isPresented: $viewModel.showingSaveAlert) {
             Button("확인", role: .cancel) { }
         } message: {
             Text("이미지가 앨범에 저장되었습니다.")
         }
         .navigationBarBackButtonHidden(true)
     }
-    
-    func loadTransferable() async {
-        for (index, photoItem) in selectedPhotos.prefix(4).enumerated() {
-            do {
-                if let imageData = try await photoItem.loadTransferable(type: Data.self),
-                   let uiImage = UIImage(data: imageData) {
-                    await MainActor.run {
-                        displayedImages[index] = Image(uiImage: uiImage)
-                    }
-                }
-            } catch {
-                print("이미지 로드 실패: \(error)")
-            }
-        }
-        selectedPhotos.removeAll()
-    }
-    
-    func savePhoto() {
-        let renderer = ImageRenderer(content: ZStack {
-            FrameImages(displayedImages: $displayedImages,
-                        backgroundImage: backgroundImage,
-                        showCloseButton: false)
-            .frame(width: 300, height: 500)
-            .background(Color.white)
-            .overlay(
-                Rectangle()
-                    .stroke(Color.black, lineWidth: 1)
-            )
-        })
-        renderer.scale = UIScreen.main.scale
-        
-        if let uiImage = renderer.uiImage {
-            UIImageWriteToSavedPhotosAlbum(uiImage, nil, nil, nil)
-            showingSaveAlert = true
-        }
-    }
-    
-    func sharePhoto() {
-        let renderer = ImageRenderer(content: ZStack {
-            FrameImages(displayedImages: $displayedImages,
-                        backgroundImage: backgroundImage,
-                        showCloseButton: false)
-            .frame(width: 300, height: 500)
-            .background(Color.white)
-            .overlay(
-                Rectangle()
-                    .stroke(Color.black, lineWidth: 1)
-            )
-        })
-        renderer.scale = UIScreen.main.scale
-        
-        if let uiImage = renderer.uiImage {
-            let activityVC = UIActivityViewController(activityItems: [uiImage], applicationActivities: nil)
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-               let rootVC = windowScene.windows.first?.rootViewController {
-                rootVC.present(activityVC, animated: true, completion: nil)
-            }
-        }
-    }
-}
-
-#Preview {
-    ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
 }

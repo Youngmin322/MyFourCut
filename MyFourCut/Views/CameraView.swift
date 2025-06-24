@@ -3,23 +3,18 @@ import UIKit
 import AVFoundation
 
 struct CameraView: View {
-    @Bindable private var camera = CameraModel()
+    @State private var viewModel = CameraViewModel()
     @Binding var displayedImages: [Image?]
     @Environment(\.dismiss) var dismiss
-    @State private var shouldNavigateToContent = false
-    @State private var countDown = 5
-    @State private var isCountingDown = false
-    @State private var photoCount = 0
-    @State private var cameraAccessDenied = false
     
     var body: some View {
         ZStack {
             // 카메라 미리보기 화면
-            CameraPreview(session: camera.session)
+            CameraPreview(session: viewModel.session)
                 .ignoresSafeArea()
             
-            if isCountingDown {
-                Text("\(countDown)")
+            if viewModel.isCountingDown {
+                Text("\(viewModel.countDown)")
                     .font(.system(size: 100, weight: .bold))
                     .bold()
                     .foregroundColor(.red)
@@ -32,7 +27,7 @@ struct CameraView: View {
                 // 찍은 사진을 보여주는 미리보기 (최대 4장)
                 HStack {
                     ForEach(0..<4) { index in
-                        if let image = displayedImages[index] {
+                        if let image = viewModel.displayedImages[index] {
                             image
                                 .resizable()
                                 .scaledToFill()
@@ -51,7 +46,7 @@ struct CameraView: View {
                 HStack(spacing: 60) {
                     // 닫기 버튼
                     Button {
-                        playHaptic(style: .medium)
+                        viewModel.playHaptic(style: .medium)
                         dismiss()
                     } label: {
                         Image(systemName: "xmark.circle.fill")
@@ -61,16 +56,7 @@ struct CameraView: View {
                     
                     // 사진 촬영 버튼
                     Button {
-                        playHaptic(style: .medium)
-                        camera.capturePhoto { image in
-                            // 첫 번째 비어 있는 공간에 사진 추가
-                            if let firstEmpty = displayedImages.firstIndex(where: { $0 == nil }) {
-                                var newImages = displayedImages
-                                newImages[firstEmpty] = Image(uiImage: image)
-                                displayedImages = newImages
-                            }
-                            countDown = 5
-                        }
+                        viewModel.capturePhoto()
                     } label: {
                         Circle()
                             .stroke(Color.white, lineWidth: 3)
@@ -84,8 +70,7 @@ struct CameraView: View {
                     
                     // 카메라 전환 버튼
                     Button {
-                        playHaptic(style: .medium)
-                        camera.switchCamera()
+                        viewModel.switchCamera()
                     } label: {
                         Image(systemName: "camera.rotate.fill")
                             .font(.system(size: 30))
@@ -96,15 +81,13 @@ struct CameraView: View {
             }
         }
         .task {
-            await checkCameraAccess()
+            await viewModel.checkCameraAccess()
         }
         .onDisappear {
-            displayedImages = Array(repeating: nil, count: 4)
-            isCountingDown = false
-            countDown = 0
+            viewModel.resetImages()
         }
-        .navigationDestination(isPresented: $shouldNavigateToContent) {
-            ContentView(initialImages: displayedImages)
+        .navigationDestination(isPresented: $viewModel.shouldNavigateToContent) {
+            ContentView(initialImages: viewModel.displayedImages)
         }
         .navigationBarBackButtonHidden(true)
         .toolbar {
@@ -118,13 +101,14 @@ struct CameraView: View {
                 }
             }
         }
-        .onChange(of: displayedImages) { _, newImages in
+        .onChange(of: viewModel.displayedImages) { _, newImages in
+            displayedImages = newImages
             if !newImages.contains(where: { $0 == nil }) {
-                shouldNavigateToContent = true
+                viewModel.shouldNavigateToContent = true
             }
         }
         .overlay {
-            if cameraAccessDenied {
+            if viewModel.cameraAccessDenied {
                 ZStack {
                     Color.black.opacity(0.8)
                         .ignoresSafeArea()
@@ -139,10 +123,7 @@ struct CameraView: View {
                             .multilineTextAlignment(.center)
                         
                         Button {
-                            if let settingsURL = URL(string: UIApplication.openSettingsURLString),
-                               UIApplication.shared.canOpenURL(settingsURL) {
-                                UIApplication.shared.open(settingsURL)
-                            }
+                            viewModel.openSettings()
                         } label: {
                             Text("설정에서 권한 허용하기")
                                 .foregroundColor(.black)
@@ -158,71 +139,6 @@ struct CameraView: View {
                     .padding()
                 }
             }
-        }
-    }
-    
-    func playHaptic(style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {
-        let generator = UIImpactFeedbackGenerator(style: style)
-        generator.impactOccurred()
-    }
-    
-    private func startAutoCapture() {
-        photoCount = 0
-        captureNextPhoto()
-    }
-    
-    private func captureNextPhoto() {
-        if photoCount >= 4 { return } // 사진 4장을 다 찍으면 종료
-        
-        isCountingDown = true
-        countDown = 5
-        
-        Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
-            if !isCountingDown {
-                timer.invalidate()
-                return
-            }
-            if countDown > 1 {
-                countDown -= 1
-            } else {
-                timer.invalidate()
-                isCountingDown = false
-                capturePhoto()
-            }
-        }
-    }
-    
-    private func capturePhoto() {
-        playHaptic(style: .medium)
-        camera.capturePhoto { image in
-            if let firstEmpty = displayedImages.firstIndex(where: { $0 == nil }) {
-                var newImages = displayedImages
-                newImages[firstEmpty] = Image(uiImage: image)
-                displayedImages = newImages
-                photoCount += 1
-                
-                if photoCount < 4 {
-                    captureNextPhoto()
-                }
-            }
-        }
-    }
-    
-    private func checkCameraAccess() async {
-        switch AVCaptureDevice.authorizationStatus(for: .video) {
-        case .notDetermined:
-            let granted = await AVCaptureDevice.requestAccess(for: .video)
-            if granted {
-                await camera.checkPermissions()
-                startAutoCapture()
-            } else {
-                cameraAccessDenied = true
-            }
-        case .authorized:
-            await camera.checkPermissions()
-            startAutoCapture()
-        default:
-            cameraAccessDenied = true
         }
     }
 }

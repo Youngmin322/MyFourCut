@@ -5,6 +5,13 @@
 //  Created by 조영민 on 2/4/25.
 //
 
+//
+//  FrameImages.swift
+//  MyFourCut
+//
+//  Created by 조영민 on 2/4/25.
+//
+
 import SwiftUI
 
 struct FrameImages: View {
@@ -66,8 +73,4 @@ struct FrameImages: View {
                 .frame(width: 300, height: 500)
         }
     }
-}
-
-#Preview {
-    ContentView()
 }

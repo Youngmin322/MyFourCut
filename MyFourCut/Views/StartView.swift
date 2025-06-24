@@ -8,8 +8,7 @@
 import SwiftUI
 
 struct StartView: View {
-    @State private var selectedPath: Int? = nil
-    @State private var displayedImages: [Image?] = Array(repeating: nil, count: 4)
+    @State private var viewModel = StartViewModel()
     
     var body: some View {
         NavigationStack {
@@ -45,15 +44,11 @@ struct StartView: View {
             .navigationTitle("")
             .navigationDestination(for: Int.self) { value in
                 if value == 1 {
-                    CameraView(displayedImages: $displayedImages)
+                    CameraView(displayedImages: $viewModel.displayedImages)
                 } else {
                     ContentView(initialImages: nil)
                 }
             }
         }
     }
-}
-
-#Preview {
-    StartView()
 }
