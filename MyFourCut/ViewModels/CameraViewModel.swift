@@ -127,7 +127,7 @@ class CameraViewModel: NSObject {
     private func scheduleNextPhoto() {
         if frameModel.isComplete { return }
         
-        stopCurrentTimer() // 혹시 모를 기존 타이머 정리
+        stopCurrentTimer()
         
         // 짧은 딜레이 후 카운트다운 시작 (자연스러운 전환을 위해)
         Task { @MainActor in

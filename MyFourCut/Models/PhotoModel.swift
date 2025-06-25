@@ -18,7 +18,7 @@ struct PhotoModel {
     }
     
     static func fromImage(_ image: Image) -> PhotoModel {
-        return PhotoModel(image: image, originalUIImage: nil)
+        return PhotoModel(image: image, originalUIImage: image.asUIImage())
     }
     
     private init(image: Image, originalUIImage: UIImage?) {
@@ -29,8 +29,12 @@ struct PhotoModel {
 
 extension Image {
     func asUIImage() -> UIImage? {
-        // SwiftUI Image를 UIImage로 변환하는 것은 복잡함
-        // 실제 구현에서는 원본 UIImage를 직접 전달하는 것이 좋음
+        let mirror = Mirror(reflecting: self)
+        for child in mirror.children {
+            if let uiImage = child.value as? UIImage {
+                return uiImage
+            }
+        }
         return nil
     }
 }
