@@ -9,12 +9,14 @@ import SwiftUI
 import UIKit
 import AVFoundation
 
-@MainActor
 @Observable
 class CameraViewModel: NSObject {
     private var frameModel = FourCutFrameModel()
     private var countdownModel = CountdownModel()
     private let cameraModel = CameraModel()
+    
+    // 타이머 관리를 위한 프로퍼티 추가
+    private var currentTimer: Timer?
     
     var shouldNavigateToContent = false
     var cameraAccessDenied = false
@@ -68,21 +70,29 @@ class CameraViewModel: NSObject {
         cameraModel.switchCamera()
     }
     
+    // 수동 촬영 - 타이머 정리 후 즉시 촬영
     func capturePhoto() {
         playHaptic(style: .medium)
+        
+        // 진행 중인 타이머가 있다면 정리
+        stopCurrentTimer()
+        
         cameraModel.capturePhoto { [weak self] image in
             guard let self = self else { return }
             Task { @MainActor in
                 let photo = PhotoModel(uiImage: image)
                 if self.frameModel.addPhoto(photo) {
-                    self.countdownModel.reset()
-                    self.countDown = self.countdownModel.currentCount
+                    // 아직 사진이 더 필요하다면 자동 촬영 재시작
+                    if !self.frameModel.isComplete {
+                        self.scheduleNextPhoto()
+                    }
                 }
             }
         }
     }
     
     func resetImages() {
+        stopCurrentTimer()
         frameModel.reset()
         countdownModel.reset()
         countDown = countdownModel.currentCount
@@ -95,47 +105,58 @@ class CameraViewModel: NSObject {
     
     private func startAutoCapture() {
         frameModel.reset()
-        captureNextPhoto()
+        scheduleNextPhoto()
     }
     
+    // 수동 촬영을 위한 카운트다운 시작
     func startCountdownAndCapture() {
         if frameModel.isComplete { return }
         
+        stopCurrentTimer() // 기존 타이머 정리
+        startCountdownTimer(isManual: true)
+    }
+    
+    // 타이머 정리 함수
+    private func stopCurrentTimer() {
+        currentTimer?.invalidate()
+        currentTimer = nil
+        countdownModel.stop()
+    }
+    
+    // 다음 사진을 위한 카운트다운 예약
+    private func scheduleNextPhoto() {
+        if frameModel.isComplete { return }
+        
+        stopCurrentTimer() // 혹시 모를 기존 타이머 정리
+        
+        // 짧은 딜레이 후 카운트다운 시작 (자연스러운 전환을 위해)
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5초 대기
+            if !self.frameModel.isComplete {
+                self.startCountdownTimer(isManual: false)
+            }
+        }
+    }
+    
+    // 통합된 카운트다운 타이머
+    private func startCountdownTimer(isManual: Bool) {
         countdownModel.reset()
         countdownModel.start()
         countDown = countdownModel.currentCount
         
-        Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
-            Task { @MainActor in
-                if self.countdownModel.tick() {
-                    self.countDown = self.countdownModel.currentCount
-                    timer.invalidate()
-                    self.capturePhotoAuto()
-                } else {
-                    self.countDown = self.countdownModel.currentCount
-                }
+        currentTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+            guard let self = self else {
+                timer.invalidate()
+                return
             }
-        }
-    }
-    
-    private func captureNextPhoto() {
-        if frameModel.isComplete { return }
-        
-        countdownModel.start()
-        countDown = countdownModel.currentCount
-        
-        Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
+            
             Task { @MainActor in
-                if !self.countdownModel.isActive {
-                    timer.invalidate()
-                    return
-                }
-                
                 if self.countdownModel.tick() {
                     // 카운트다운 완료
                     timer.invalidate()
-                    self.countDown = self.countdownModel.currentCount
-                    self.capturePhotoAuto()
+                    self.currentTimer = nil
+                    self.countDown = 0
+                    self.capturePhotoAuto(isManual: isManual)
                 } else {
                     self.countDown = self.countdownModel.currentCount
                 }
@@ -143,15 +164,16 @@ class CameraViewModel: NSObject {
         }
     }
     
-    private func capturePhotoAuto() {
+    private func capturePhotoAuto(isManual: Bool) {
         playHaptic(style: .medium)
         cameraModel.capturePhoto { [weak self] image in
             guard let self = self else { return }
             Task { @MainActor in
                 let photo = PhotoModel(uiImage: image)
                 if self.frameModel.addPhoto(photo) {
-                    if !self.frameModel.isComplete {
-                        self.captureNextPhoto()
+                    // 수동 촬영이 아니고 아직 사진이 더 필요하다면 다음 촬영 예약
+                    if !isManual && !self.frameModel.isComplete {
+                        self.scheduleNextPhoto()
                     }
                 }
             }
@@ -163,5 +185,9 @@ class CameraViewModel: NSObject {
            UIApplication.shared.canOpenURL(settingsURL) {
             UIApplication.shared.open(settingsURL)
         }
+    }
+    
+    deinit {
+        stopCurrentTimer()
     }
 }
