@@ -29,19 +29,58 @@ class ContentViewModel {
     }
     
     func loadTransferable() async {
-        for (index, photoItem) in selectedPhotos.prefix(4).enumerated() {
+        // 현재 비어있는 자리들을 찾기
+        var newImages: [Image] = []
+        
+        for photoItem in selectedPhotos {
             do {
                 if let imageData = try await photoItem.loadTransferable(type: Data.self),
-                   let uiImage = UIImage(data: imageData) {
-                    let photo = PhotoModel(uiImage: uiImage)
-                    frameModel.setPhoto(photo, at: index)
+                   let uiImages = UIImage(data: imageData) {
+                    let image = Image(uiImage: uiImages)
+                    newImages.append(image)
                 }
             } catch {
                 print("이미지 로드 실패: \(error)")
             }
         }
+        
+        // 현재 displayedImages 복사
+        var updatedImages = displayedImages
+        
+        // 배열이 4개 미만이면 nil로 채우기
+        while updatedImages.count < 4 {
+            updatedImages.append(nil)
+        }
+        
+        // 빈 자리 찾기
+        var emptyIndices: [Int] = []
+        for i in 0..<4 {
+            if updatedImages[i] == nil {
+                emptyIndices.append(i)
+            }
+        }
+        print("빈 인덱스: \(emptyIndices)")
+        print("새 이미지 개수: \(newImages.count)")
+        print("처리 전 displayedImages: \(updatedImages.map { $0 == nil ? "nil" : "Image" })")
+        
+        // 새 이미지들을 빈 자리에 순서대로 배치
+        for (newImageIndex, newImage) in newImages.enumerated() {
+            if newImageIndex < emptyIndices.count {
+                let targetIndex = emptyIndices[newImageIndex]
+                updatedImages[targetIndex] = newImage
+                print("사진을 \(targetIndex)번 자리에 배치")
+            }
+        }
+        
         selectedPhotos.removeAll()
-        self.displayedImages = frameModel.displayedImages
+        
+        // displayedImages 직접 업데이트
+        self.displayedImages = updatedImages
+        
+        // frameModel도 동기화 (필요한 경우)
+        frameModel.setImages(updatedImages)
+        
+        print("처리 후 displayedImages: \(self.displayedImages.map { $0 == nil ? "nil" : "Image" })")
     }
     
     func savePhoto() {
