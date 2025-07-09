@@ -77,7 +77,7 @@ class ContentViewModel {
         // displayedImages 직접 업데이트
         self.displayedImages = updatedImages
         
-        // frameModel도 동기화 (필요한 경우)
+        // frameModel도 동기화
         frameModel.setImages(updatedImages)
         
         print("처리 후 displayedImages: \(self.displayedImages.map { $0 == nil ? "nil" : "Image" })")
