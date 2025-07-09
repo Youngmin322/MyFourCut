@@ -21,25 +21,13 @@ struct StartView: View {
                     
                     // 로고 영역
                     VStack(spacing: 10) {
-                        // 4개의 사각형으로 이루어진 로고
-                        HStack(spacing: 8) {
-                            ForEach(0..<2) { _ in
-                                VStack(spacing: 8) {
-                                    ForEach(0..<2) { _ in
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .fill(Color.black)
-                                            .frame(width: 60, height: 60)
-                                            .overlay(
-                                                Image(systemName: ["face.smiling", "star.fill", "heart.fill", "hand.peace"][.random(in: 0...3)])
-                                                    .foregroundColor(.white)
-                                                    .font(.system(size: 30))
-                                            )
-                                    }
-                                }
-                            }
-                        }
+                        Image("AppLogo")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 250, height: 250)
+                            .cornerRadius(20)
                         
-                        Text("나만의 네컷")
+                        Text("나의 네컷")
                             .font(.system(size: 36, weight: .bold))
                             .foregroundColor(.black)
                     }
@@ -48,21 +36,6 @@ struct StartView: View {
                     
                     // 버튼 영역
                     VStack(spacing: 16) {
-                        // NEW 배지
-                        HStack {
-                            Spacer()
-                            Text("NEW 앨범 이미지로 나만의 네컷 만들기!")
-                                .font(.system(size: 14))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(
-                                    Capsule()
-                                        .fill(Color.blue)
-                                )
-                            Spacer()
-                        }
-                        
                         NavigationLink(value: 2) {
                             Text("앨범에서 선택")
                                 .font(.system(size: 18, weight: .semibold))
