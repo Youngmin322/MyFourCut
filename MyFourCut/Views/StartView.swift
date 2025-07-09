@@ -21,6 +21,7 @@ struct StartView: View {
                     
                     // 로고 영역
                     VStack(spacing: 10) {
+                        // AppIcon 이미지 사용
                         Image("AppLogo")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
@@ -36,8 +37,8 @@ struct StartView: View {
                     
                     // 버튼 영역
                     VStack(spacing: 16) {
-                        NavigationLink(value: 2) {
-                            Text("앨범에서 선택")
+                        NavigationLink(value: 1) {
+                            Text("촬영하기")
                                 .font(.system(size: 18, weight: .semibold))
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
@@ -47,8 +48,8 @@ struct StartView: View {
                         }
                         .padding(.horizontal, 40)
                         
-                        NavigationLink(value: 1) {
-                            Text("촬영하기")
+                        NavigationLink(value: 2) {
+                            Text("앨범에서 선택")
                                 .font(.system(size: 18, weight: .semibold))
                                 .foregroundColor(.black)
                                 .frame(maxWidth: .infinity)
@@ -60,12 +61,6 @@ struct StartView: View {
                                 )
                         }
                         .padding(.horizontal, 40)
-                        
-                        // 생성된 네컷 개수
-                        Text("생성된 네컷 캐쉬 : 0")
-                            .font(.system(size: 14))
-                            .foregroundColor(.gray)
-                            .padding(.top, 8)
                     }
                     
                     Spacer()
