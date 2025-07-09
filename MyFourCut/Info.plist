@@ -13,5 +13,11 @@
         <key>NSAllowsArbitraryLoads</key>
         <true/>
     </dict>
+
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>네컷 사진을 만들기 위해 사진 라이브러리에서 사진을 선택합니다.</string>
+
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>완성된 네컷 사진을 사진 라이브러리에 저장합니다.</string>
 </dict>
 </plist>

@@ -8,13 +8,22 @@
 import SwiftUI
 import PhotosUI
 
+enum ContentTab {
+    case frame
+    case filter
+}
+
 @MainActor
 @Observable
 class ContentViewModel {
     private var frameModel = FourCutFrameModel()
     var selectedPhotos: [PhotosPickerItem] = []
+    var selectedImages: [Image] = []  // 최대 8장
     var showingSaveAlert = false
     var displayedImages: [Image?] = []
+    var currentTab: ContentTab = .frame
+    var selectedFilter: FilterType = .none
+    
     var backgroundImage: String? {
         frameModel.selectedBackground.imageName
     }
@@ -25,18 +34,76 @@ class ContentViewModel {
         if let images = initialImages {
             frameModel.setInitialImages(images)
             self.displayedImages = frameModel.displayedImages
+            self.selectedImages = images.compactMap { $0 }
         }
     }
     
+    // 선택된 이미지 추가
+    func addSelectedImage(_ image: Image) {
+        if selectedImages.count < 8 {
+            selectedImages.append(image)
+            updateDisplayedImages()
+        }
+    }
+    
+    // 선택된 이미지 제거
+    func removeSelectedImage(at index: Int) {
+        guard index < selectedImages.count else { return }
+        selectedImages.remove(at: index)
+        updateDisplayedImages()
+    }
+    
+    // 표시할 이미지 업데이트 (처음 4장만)
+    private func updateDisplayedImages() {
+        let imagesToDisplay = Array(selectedImages.prefix(4))
+        var images: [Image?] = imagesToDisplay
+        
+        // 4장 미만이면 nil로 채우기
+        while images.count < 4 {
+            images.append(nil)
+        }
+        
+        displayedImages = images
+        frameModel.setImages(images)
+    }
+    
+    // 프레임에서 특정 위치 이미지 변경
+    func swapImage(from: Int, to: Int) {
+        guard from < selectedImages.count && to < 4 else { return }
+        
+        // 현재 표시된 이미지 가져오기
+        var currentDisplayed = Array(selectedImages.prefix(4))
+        
+        // from이 현재 표시된 이미지 내에 있는 경우
+        if from < 4 && to < currentDisplayed.count {
+            currentDisplayed.swapAt(from, to)
+        } else if from >= 4 {
+            // from이 표시되지 않은 이미지인 경우
+            let imageToSwap = selectedImages[from]
+            if to < currentDisplayed.count {
+                selectedImages[from] = currentDisplayed[to]
+                currentDisplayed[to] = imageToSwap
+            }
+        }
+        
+        // 선택된 이미지 업데이트
+        for (index, image) in currentDisplayed.enumerated() {
+            if index < selectedImages.count {
+                selectedImages[index] = image
+            }
+        }
+        
+        updateDisplayedImages()
+    }
+    
     func loadTransferable() async {
-        // 현재 비어있는 자리들을 찾기
         var newImages: [Image] = []
         
         for photoItem in selectedPhotos {
             do {
                 if let imageData = try await photoItem.loadTransferable(type: Data.self),
-                   let uiImages = UIImage(data: imageData) {
-                    let image = Image(uiImage: uiImages)
+                   let uiImage = UIImage(data: imageData) {
+                    let image = Image(uiImage: uiImage)
                     newImages.append(image)
                 }
             } catch {
@@ -44,57 +111,39 @@ class ContentViewModel {
             }
         }
         
-        // 현재 displayedImages 복사
-        var updatedImages = displayedImages
-        
-        // 배열이 4개 미만이면 nil로 채우기
-        while updatedImages.count < 4 {
-            updatedImages.append(nil)
-        }
-        
-        // 빈 자리 찾기
-        var emptyIndices: [Int] = []
-        for i in 0..<4 {
-            if updatedImages[i] == nil {
-                emptyIndices.append(i)
-            }
-        }
-        print("빈 인덱스: \(emptyIndices)")
-        print("새 이미지 개수: \(newImages.count)")
-        print("처리 전 displayedImages: \(updatedImages.map { $0 == nil ? "nil" : "Image" })")
-        
-        // 새 이미지들을 빈 자리에 순서대로 배치
-        for (newImageIndex, newImage) in newImages.enumerated() {
-            if newImageIndex < emptyIndices.count {
-                let targetIndex = emptyIndices[newImageIndex]
-                updatedImages[targetIndex] = newImage
-                print("사진을 \(targetIndex)번 자리에 배치")
+        // 새 이미지들 추가 (8장 제한)
+        for image in newImages {
+            if selectedImages.count < 8 {
+                selectedImages.append(image)
             }
         }
         
         selectedPhotos.removeAll()
-        
-        // displayedImages 직접 업데이트
-        self.displayedImages = updatedImages
-        
-        // frameModel도 동기화
-        frameModel.setImages(updatedImages)
-        
-        print("처리 후 displayedImages: \(self.displayedImages.map { $0 == nil ? "nil" : "Image" })")
+        updateDisplayedImages()
     }
     
     func savePhoto() {
-        let renderer = ImageRenderer(content: ZStack {
-            FrameImages(displayedImages: .constant(displayedImages),
-                        backgroundImage: backgroundImage,
-                        showCloseButton: false)
-            .frame(width: 300, height: 500)
-            .background(Color.white)
-            .overlay(
-                Rectangle()
-                    .stroke(Color.black, lineWidth: 1)
-            )
-        })
+        let renderer = ImageRenderer(content:
+            ZStack {
+                FrameImages(displayedImages: .constant(displayedImages),
+                           backgroundImage: backgroundImage,
+                           showCloseButton: false)
+                .frame(width: 300, height: 500)
+                .background(Color.white)
+                .overlay(
+                    Rectangle()
+                        .stroke(Color.black, lineWidth: 1)
+                )
+                
+                // 필터 적용
+                if selectedFilter != .none {
+                    Rectangle()
+                        .fill(selectedFilter.color.opacity(0.3))
+                        .frame(width: 300, height: 500)
+                        .blendMode(getBlendMode(for: selectedFilter))
+                }
+            }
+        )
         renderer.scale = UIScreen.main.scale
         
         if let uiImage = renderer.uiImage {
@@ -104,17 +153,27 @@ class ContentViewModel {
     }
     
     func sharePhoto() {
-        let renderer = ImageRenderer(content: ZStack {
-            FrameImages(displayedImages: .constant(displayedImages),
-                        backgroundImage: backgroundImage,
-                        showCloseButton: false)
-            .frame(width: 300, height: 500)
-            .background(Color.white)
-            .overlay(
-                Rectangle()
-                    .stroke(Color.black, lineWidth: 1)
-            )
-        })
+        let renderer = ImageRenderer(content:
+            ZStack {
+                FrameImages(displayedImages: .constant(displayedImages),
+                           backgroundImage: backgroundImage,
+                           showCloseButton: false)
+                .frame(width: 300, height: 500)
+                .background(Color.white)
+                .overlay(
+                    Rectangle()
+                        .stroke(Color.black, lineWidth: 1)
+                )
+                
+                // 필터 적용
+                if selectedFilter != .none {
+                    Rectangle()
+                        .fill(selectedFilter.color.opacity(0.3))
+                        .frame(width: 300, height: 500)
+                        .blendMode(getBlendMode(for: selectedFilter))
+                }
+            }
+        )
         renderer.scale = UIScreen.main.scale
         
         if let uiImage = renderer.uiImage {
@@ -133,5 +192,14 @@ class ContentViewModel {
     func removeImage(at index: Int) {
         frameModel.removePhoto(at: index)
         self.displayedImages = frameModel.displayedImages
+    }
+    
+    private func getBlendMode(for filter: FilterType) -> BlendMode {
+        switch filter {
+        case .none: return .normal
+        case .blackWhite: return .luminosity
+        case .sepia, .vintage: return .multiply
+        case .cool, .warm: return .colorBurn
+        }
     }
 }
