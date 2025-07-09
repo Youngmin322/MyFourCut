@@ -16,20 +16,22 @@ struct PhotoSelectionView: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        GeometryReader { geometry in
+        ZStack {
+            Color.white.ignoresSafeArea(.all)
+            
             VStack(spacing: 0) {
                 // Header
                 headerView
                 
                 // Photo Grid
-                photoGrid(geometry: geometry)
+                photoGrid(geometry: UIScreen.main.bounds)
                 
                 // Bottom Bar
                 bottomBar
             }
-            .frame(width: geometry.size.width, height: geometry.size.height)
         }
-        .ignoresSafeArea(edges: .bottom)
+        .navigationBarHidden(true)
+        .navigationBarBackButtonHidden(true)
         .photosPicker(
             isPresented: $showingPhotoPicker,
             selection: $selectedPhotosForPicker,
@@ -53,20 +55,19 @@ struct PhotoSelectionView: View {
             
             Spacer()
             
-            Text("나만의 네컷")
+            Text("나의 네컷")
                 .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.black)
             
             Spacer()
-            
-            // 빈 공간 (레이아웃 균형)
-            Color.clear.frame(width: 30)
+    
         }
-        .padding()
+        .padding(.horizontal)
+        .padding(.bottom, 16)
         .background(Color.white)
     }
     
-    private func photoGrid(geometry: GeometryProxy) -> some View {
+    private func photoGrid(geometry: CGRect) -> some View {
         ScrollView {
             LazyVGrid(columns: [
                 GridItem(.flexible(), spacing: 2),
@@ -86,9 +87,11 @@ struct PhotoSelectionView: View {
                 }
             }
             .padding(.horizontal, 2)
-            .padding(.top, 2)
+            .padding(.top, 16)
+            
+            // 빈 공간을 위한 Spacer 추가
+            Spacer(minLength: 100)
         }
-        .frame(maxHeight: .infinity)
     }
     
     private func addPhotoButton(size: CGFloat) -> some View {
@@ -157,6 +160,14 @@ struct PhotoSelectionView: View {
         .background(Color.white)
     }
     
+    private func getSafeAreaTop() -> CGFloat {
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first {
+            return window.safeAreaInsets.top
+        }
+        return 44 // 기본값
+    }
+    
     private func loadSelectedPhotos(_ items: [PhotosPickerItem]) async {
         for item in items {
             if let data = try? await item.loadTransferable(type: Data.self),
@@ -167,4 +178,11 @@ struct PhotoSelectionView: View {
         }
         selectedPhotosForPicker.removeAll()
     }
+}
+
+#Preview {
+    PhotoSelectionView(
+        selectedImages: .constant([]),
+        currentStep: .constant(.photoSelection)
+    )
 }
