@@ -15,6 +15,9 @@ struct FramePreviewView: View {
     // 프레임에 들어갈 이미지들의 인덱스를 관리
     @State private var frameImageIndices: [Int] = []
     
+    // 선택된 이미지 순서를 상위 뷰로 전달하기 위한 클로저
+    var onFrameImagesSelected: (([Image]) -> Void)?
+    
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -48,7 +51,7 @@ struct FramePreviewView: View {
     
     private var framePreviewSection: some View {
         VStack(spacing: 20) {
-            // 프레임 미리보기 - 빈 프레임으로 시작
+            // 프레임 미리보기 - 선택된 순서대로 표시
             FrameImages(
                 displayedImages: .constant(frameImageIndices.map { selectedImages[$0] }),
                 backgroundImage: backgroundImage,
@@ -80,6 +83,7 @@ struct FramePreviewView: View {
     
     private func photoThumbnail(image: Image, index: Int) -> some View {
         let isInFrame = frameImageIndices.contains(index)
+        let framePosition = frameImageIndices.firstIndex(of: index) // 프레임 내에서의 위치
         
         return Button(action: {
             // 프레임에 이미지 추가/제거 로직
@@ -106,13 +110,24 @@ struct FramePreviewView: View {
                             )
                     )
                 
-                Text("\(index + 1)")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(width: 20, height: 20)
-                    .background(isInFrame ? Color.blue : Color.gray)
-                    .clipShape(Circle())
-                    .offset(x: -20, y: -35)
+                // 프레임에 선택된 순서 표시
+                if let position = framePosition {
+                    Text("\(position + 1)")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 20, height: 20)
+                        .background(Color.blue)
+                        .clipShape(Circle())
+                        .offset(x: -20, y: -35)
+                } else {
+                    Text("\(index + 1)")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 20, height: 20)
+                        .background(Color.gray)
+                        .clipShape(Circle())
+                        .offset(x: -20, y: -35)
+                }
             }
         }
     }
@@ -120,6 +135,9 @@ struct FramePreviewView: View {
     private var bottomButton: some View {
         Button(action: {
             if frameImageIndices.count >= 4 {
+                // 선택된 이미지들을 순서대로 상위 뷰로 전달
+                let orderedImages = frameImageIndices.map { selectedImages[$0] }
+                onFrameImagesSelected?(orderedImages)
                 currentStep = .frameAndFilter
             }
         }) {

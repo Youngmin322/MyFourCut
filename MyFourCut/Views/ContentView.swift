@@ -37,7 +37,11 @@ struct ContentView: View {
                 FramePreviewView(
                     selectedImages: $viewModel.selectedImages,
                     currentStep: $currentStep,
-                    backgroundImage: viewModel.backgroundImage
+                    backgroundImage: viewModel.backgroundImage,
+                    onFrameImagesSelected: { orderedImages in
+                        // 프레임에 선택된 이미지들을 순서대로 viewModel에 저장
+                        viewModel.updateFrameImages(with: orderedImages)
+                    }
                 )
             case .frameAndFilter:
                 FrameFilterView(

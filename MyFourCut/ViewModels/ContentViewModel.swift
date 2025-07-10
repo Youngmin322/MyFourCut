@@ -67,6 +67,23 @@ class ContentViewModel {
         frameModel.setImages(images)
     }
     
+    // FramePreviewView에서 선택한 이미지 순서를 업데이트하는 메서드
+    func updateFrameImages(with orderedImages: [Image]) {
+        // 프레임에 표시될 이미지들을 순서대로 설정
+        var newDisplayedImages: [Image?] = []
+        
+        for i in 0..<4 {
+            if i < orderedImages.count {
+                newDisplayedImages.append(orderedImages[i])
+            } else {
+                newDisplayedImages.append(nil)
+            }
+        }
+        
+        displayedImages = newDisplayedImages
+        frameModel.setImages(newDisplayedImages)
+    }
+    
     // 프레임에서 특정 위치 이미지 변경
     func swapImage(from: Int, to: Int) {
         guard from < selectedImages.count && to < 4 else { return }
