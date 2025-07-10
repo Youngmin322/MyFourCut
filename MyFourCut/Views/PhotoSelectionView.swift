@@ -17,23 +17,21 @@ struct PhotoSelectionView: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        ZStack {
-            Color.white.ignoresSafeArea(.all)
+        VStack(spacing: 0) {
+            // Header
+            headerView
             
-            VStack(spacing: 0) {
-                // Header
-                headerView
-                
-                // Gallery Grid
-                galleryGrid
-                
-                // Selected Photos Display
-                selectedPhotosDisplay
-                
-                // Bottom Bar
-                bottomBar
-            }
+            // Gallery Grid
+            galleryGrid
+            
+            // Selected Photos Display
+            selectedPhotosDisplay
+            
+            // Bottom Bar
+            bottomBar
         }
+        .background(Color.white)
+        .ignoresSafeArea(.container, edges: .bottom)
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
         .onAppear {
@@ -58,7 +56,7 @@ struct PhotoSelectionView: View {
             Spacer()
         }
         .padding(.horizontal)
-        .padding(.bottom, 16)
+        .padding(.top, -60)
         .background(Color.white)
     }
     
