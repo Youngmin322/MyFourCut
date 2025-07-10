@@ -80,3 +80,4 @@ enum FilterType: CaseIterable {
         }
     }
 }
+

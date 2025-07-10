@@ -16,16 +16,18 @@ struct FrameFilterView: View {
             // Header
             headerView
             
-            // Frame Preview
-            framePreview
-            
-            // Filter/Frame Selection
-            selectionSection
-            
-            Spacer()
-            
-            // Save Button
-            saveButton
+            ScrollView {
+                // Frame Preview
+                framePreview
+                
+                // Filter/Frame Selection
+                selectionSection
+                
+                Spacer()
+                
+                // Save Button
+                saveButton
+            }
         }
         .alert("저장 완료", isPresented: Bindable(viewModel).showingSaveAlert) {
             Button("확인", role: .cancel) { }
@@ -61,7 +63,8 @@ struct FrameFilterView: View {
                     .font(.system(size: 20))
             }
         }
-        .padding()
+        .padding(.horizontal)
+        .padding(.bottom, 10)
         .background(Color.white)
     }
     
@@ -154,7 +157,9 @@ struct FrameFilterView: View {
                 .background(Color.black)
                 .cornerRadius(10)
         }
-        .padding()
+        .padding(.horizontal)
+        .padding(.bottom, 30) // 홈 인디케이터와의 간격
+        .padding(.top, 10)
     }
 }
 
@@ -242,4 +247,11 @@ struct FilterOptionButton: View {
             }
         }
     }
+}
+
+#Preview {
+    FrameFilterView(
+        viewModel: ContentViewModel(initialImages: []),
+        currentStep: .constant(.frameAndFilter)
+    )
 }
