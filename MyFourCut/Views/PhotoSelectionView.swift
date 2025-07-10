@@ -24,7 +24,7 @@ struct PhotoSelectionView: View {
                 // Header
                 headerView
                 
-                // Gallery Grid (빨간색 영역)
+                // Gallery Grid
                 galleryGrid
                 
                 // Selected Photos Display
@@ -75,37 +75,36 @@ struct PhotoSelectionView: View {
             }
             .padding(.horizontal, 2)
         }
-        .background(Color.red.opacity(0.1)) // 갤러리 영역 표시용
-        .frame(height: UIScreen.main.bounds.height * 0.5) // 화면의 50% 높이
+        .frame(height: UIScreen.main.bounds.height * 0.5)
     }
     
     private func galleryImageItem(asset: PHAsset) -> some View {
         let isSelected: Bool = selectedAssets.contains(asset)
         let selectionIndex: Int? = selectedAssets.firstIndex(of: asset)
         
-        return Button(action: {
+        return ZStack(alignment: .topTrailing) {
+            PhotoAssetView(asset: asset,
+                          size: CGSize(width: (UIScreen.main.bounds.width - 8) / 3,
+                                     height: (UIScreen.main.bounds.width - 8) / 3))
+            
+            if isSelected, let index = selectionIndex {
+                Text("\(index + 1)")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 24, height: 24)
+                    .background(Color.blue)
+                    .clipShape(Circle())
+                    .padding(4)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
             if isSelected {
                 selectedAssets.removeAll { $0 == asset }
                 updateSelectedImages()
             } else if selectedAssets.count < 8 {
                 selectedAssets.append(asset)
                 updateSelectedImages()
-            }
-        }) {
-            ZStack(alignment: .topTrailing) {
-                PhotoAssetView(asset: asset,
-                              size: CGSize(width: (UIScreen.main.bounds.width - 8) / 3,
-                                         height: (UIScreen.main.bounds.width - 8) / 3))
-                
-                if isSelected, let index = selectionIndex {
-                    Text("\(index + 1)")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(width: 24, height: 24)
-                        .background(Color.blue)
-                        .clipShape(Circle())
-                        .padding(4)
-                }
             }
         }
     }
@@ -138,13 +137,13 @@ struct PhotoSelectionView: View {
     }
     
     private func selectedPhotoThumbnail(asset: PHAsset, index: Int) -> some View {
-        Button(action: {
-            selectedAssets.remove(at: index)
-            updateSelectedImages()
-        }) {
-            PhotoAssetView(asset: asset, size: CGSize(width: 60, height: 60))
-                .cornerRadius(8)
-        }
+        PhotoAssetView(asset: asset, size: CGSize(width: 60, height: 60))
+            .cornerRadius(8)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                selectedAssets.remove(at: index)
+                updateSelectedImages()
+            }
     }
     
     private var bottomBar: some View {
@@ -210,7 +209,7 @@ struct PhotoSelectionView: View {
     }
 }
 
-// PhotoAssetView - 완전히 다른 구조로 변경
+// PhotoAssetView - 크롭해서 보여주도록 수정
 struct PhotoAssetView: View {
     let asset: PHAsset
     let size: CGSize
@@ -222,7 +221,7 @@ struct PhotoAssetView: View {
             if let uiImage = uiImage {
                 Image(uiImage: uiImage)
                     .resizable()
-                    .aspectRatio(1, contentMode: .fill)
+                    .aspectRatio(contentMode: .fill)
                     .frame(width: size.width, height: size.height)
                     .clipped()
             } else {
