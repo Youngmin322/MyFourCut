@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct PhotoModel {
+struct PhotoModel: Identifiable, Equatable {
     let id = UUID()
     let image: Image
     let originalUIImage: UIImage?
@@ -25,16 +25,8 @@ struct PhotoModel {
         self.image = image
         self.originalUIImage = originalUIImage
     }
-}
-
-extension Image {
-    func asUIImage() -> UIImage? {
-        let mirror = Mirror(reflecting: self)
-        for child in mirror.children {
-            if let uiImage = child.value as? UIImage {
-                return uiImage
-            }
-        }
-        return nil
+    
+    static func == (lhs: PhotoModel, rhs: PhotoModel) -> Bool {
+        return lhs.id == rhs.id
     }
 }

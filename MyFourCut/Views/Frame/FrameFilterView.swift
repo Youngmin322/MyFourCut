@@ -9,27 +9,21 @@ import SwiftUI
 
 struct FrameFilterView: View {
     var viewModel: ContentViewModel
-    @Binding var currentStep: ContentView.ContentStep
+    @Binding var currentStep: ContentStep
+    @State private var frameFilterViewModel = FrameFilterViewModel()
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
             headerView
             
             ScrollView {
-                // Frame Preview
                 framePreview
-                
-                // Filter/Frame Selection
                 selectionSection
-                
                 Spacer()
-                
-                // Save Button
                 saveButton
             }
         }
-        .alert("저장 완료", isPresented: Bindable(viewModel).showingSaveAlert) {
+        .alert("저장 완료", isPresented: $frameFilterViewModel.showingSaveAlert) {
             Button("확인", role: .cancel) { }
         } message: {
             Text("이미지가 앨범에 저장되었습니다.")
@@ -54,9 +48,11 @@ struct FrameFilterView: View {
             
             Spacer()
             
-            // 공유 버튼
             Button(action: {
-                viewModel.sharePhoto()
+                frameFilterViewModel.sharePhoto(
+                    displayedImages: viewModel.displayedImages,
+                    backgroundImage: viewModel.backgroundImage
+                )
             }) {
                 Image(systemName: "square.and.arrow.up")
                     .foregroundColor(.black)
@@ -69,26 +65,32 @@ struct FrameFilterView: View {
     }
     
     private var framePreview: some View {
-        FrameImages(
-            displayedImages: Bindable(viewModel).displayedImages,
-            backgroundImage: viewModel.backgroundImage,
-            showCloseButton: true
-        )
-        .frame(width: 300, height: 500)
-        .background(Color.white)
-        .overlay(
-            Rectangle()
-                .stroke(Color.black, lineWidth: 1)
-        )
+        ZStack {
+            FrameImages(
+                displayedImages: Bindable(viewModel).displayedImages,
+                backgroundImage: viewModel.backgroundImage,
+                showCloseButton: true
+            )
+            .frame(width: 300, height: 500)
+            .background(Color.white)
+            .overlay(
+                Rectangle()
+                    .stroke(Color.black, lineWidth: 1)
+            )
+            
+            if frameFilterViewModel.selectedFilter != .none {
+                Rectangle()
+                    .fill(frameFilterViewModel.selectedFilter.color.opacity(0.3))
+                    .frame(width: 300, height: 500)
+                    .blendMode(getBlendMode(for: frameFilterViewModel.selectedFilter))
+            }
+        }
         .padding(.vertical, 20)
     }
     
     private var selectionSection: some View {
         VStack(spacing: 0) {
-            // Tab Selection
             tabBar
-            
-            // Options
             optionsScrollView
         }
     }
@@ -97,14 +99,14 @@ struct FrameFilterView: View {
         HStack(spacing: 0) {
             TabButton(
                 title: "프레임",
-                isSelected: viewModel.currentTab == .frame,
-                action: { viewModel.currentTab = .frame }
+                isSelected: frameFilterViewModel.currentTab == .frame,
+                action: { frameFilterViewModel.selectTab(.frame) }
             )
             
             TabButton(
                 title: "필터",
-                isSelected: viewModel.currentTab == .filter,
-                action: { viewModel.currentTab = .filter }
+                isSelected: frameFilterViewModel.currentTab == .filter,
+                action: { frameFilterViewModel.selectTab(.filter) }
             )
         }
         .background(Color.gray.opacity(0.1))
@@ -113,7 +115,7 @@ struct FrameFilterView: View {
     private var optionsScrollView: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
-                if viewModel.currentTab == .frame {
+                if frameFilterViewModel.currentTab == .frame {
                     frameOptions
                 } else {
                     filterOptions
@@ -139,15 +141,18 @@ struct FrameFilterView: View {
         ForEach(FilterType.allCases, id: \.self) { filter in
             FilterOptionButton(
                 filter: filter,
-                isSelected: viewModel.selectedFilter == filter,
-                action: { viewModel.selectedFilter = filter }
+                isSelected: frameFilterViewModel.selectedFilter == filter,
+                action: { frameFilterViewModel.selectFilter(filter) }
             )
         }
     }
     
     private var saveButton: some View {
         Button(action: {
-            viewModel.savePhoto()
+            frameFilterViewModel.savePhoto(
+                displayedImages: viewModel.displayedImages,
+                backgroundImage: viewModel.backgroundImage
+            )
         }) {
             Text("사진 저장")
                 .font(.system(size: 17, weight: .semibold))
@@ -158,13 +163,21 @@ struct FrameFilterView: View {
                 .cornerRadius(10)
         }
         .padding(.horizontal)
-        .padding(.bottom, 30) // 홈 인디케이터와의 간격
+        .padding(.bottom, 30)
         .padding(.top, 10)
+    }
+    
+    private func getBlendMode(for filter: FilterType) -> BlendMode {
+        switch filter {
+        case .none: return .normal
+        case .blackWhite: return .luminosity
+        case .sepia, .vintage: return .multiply
+        case .cool, .warm: return .colorBurn
+        }
     }
 }
 
-// MARK: - Supporting Views
-
+// Supporting Views
 struct TabButton: View {
     let title: String
     let isSelected: Bool
@@ -247,11 +260,4 @@ struct FilterOptionButton: View {
             }
         }
     }
-}
-
-#Preview {
-    FrameFilterView(
-        viewModel: ContentViewModel(initialImages: []),
-        currentStep: .constant(.frameAndFilter)
-    )
 }

@@ -37,27 +37,6 @@ struct FourCutFrameModel {
         selectedBackground = background
     }
     
-    mutating func changeBackgroundByName(_ imageName: String) {
-        if let background = BackgroundModel.defaultBackgrounds.first(where: { $0.imageName == imageName }) {
-            selectedBackground = background
-        }
-    }
-    
-    mutating func setInitialImages(_ images: [Image?]) {
-        for (index, image) in images.enumerated() {
-            if index < photos.count, let image = image {
-                // Image를 UIImage로 변환하는 로직 필요
-                if let uiImage = image.asUIImage() {
-                    let photo = PhotoModel(uiImage: uiImage)
-                    photos[index] = photo
-                } else {
-                    // 임시로 Image를 그대로 저장
-                    photos[index] = PhotoModel.fromImage(image)
-                }
-            }
-        }
-    }
-    
     mutating func setImages(_ images: [Image?]) {
         for (index, image) in images.enumerated() {
             if index < photos.count {
@@ -90,12 +69,10 @@ struct FourCutFrameModel {
         return photos.compactMap { $0 }.count
     }
     
-    // 기존 displayedImages와의 호환성을 위한 computed property
     var displayedImages: [Image?] {
         return photos.map { $0?.image }
     }
     
-    // UIImage 배열 반환 (저장/공유 시 사용)
     var uiImages: [UIImage?] {
         return photos.map { $0?.originalUIImage }
     }

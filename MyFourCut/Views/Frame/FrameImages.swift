@@ -14,9 +14,8 @@ struct FrameImages: View {
     
     var body: some View {
         ZStack {
-            Color.white
-                .ignoresSafeArea()
-            // 선택된 배경 이미지 표시
+            Color.white.ignoresSafeArea()
+            
             if let bgImage = backgroundImage, let uiImage = UIImage(named: bgImage) {
                 Image(uiImage: uiImage)
                     .resizable()
@@ -60,7 +59,6 @@ struct FrameImages: View {
                 Spacer().frame(height: 90)
             }
             
-            // 테두리 추가
             Rectangle()
                 .stroke(Color.black, lineWidth: 3)
                 .frame(width: 300, height: 500)

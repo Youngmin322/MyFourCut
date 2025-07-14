@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct BackgroundModel {
+struct BackgroundModel: Identifiable, Equatable {
     let id: String
     let imageName: String
     let displayName: String

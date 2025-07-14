@@ -9,22 +9,29 @@ import SwiftUI
 import UIKit
 import AVFoundation
 
+@MainActor
 @Observable
-class CameraViewModel: NSObject {
+class CameraViewModel {
+    // Services
+    private let cameraService = CameraService()
+    private let hapticService = HapticService.shared
+    
+    // Models
     private var frameModel = FourCutFrameModel()
     private var countdownModel = CountdownModel()
-    private let cameraModel = CameraModel()
     
-    // 타이머 관리를 위한 프로퍼티 추가
+    // Timer
     private var currentTimer: Timer?
     
+    // Published Properties
     var shouldNavigateToContent = false
     var cameraAccessDenied = false
+    var countDown: Int = 5
+    
+    // Computed Properties
     var displayedImages: [Image?] {
         frameModel.displayedImages
     }
-    
-    var countDown: Int = 5
     
     var isCountingDown: Bool {
         countdownModel.isActive
@@ -35,54 +42,34 @@ class CameraViewModel: NSObject {
     }
     
     var session: AVCaptureSession {
-        cameraModel.session
+        cameraService.session
     }
     
-    override init() {
-        super.init()
-        setupBindings()
-    }
-    
-    private func setupBindings() {
-        // CameraModel과의 바인딩 설정
-    }
+    // MARK: - Public Methods
     
     func checkCameraAccess() async {
-        switch AVCaptureDevice.authorizationStatus(for: .video) {
-        case .notDetermined:
-            let granted = await AVCaptureDevice.requestAccess(for: .video)
-            if granted {
-                await cameraModel.checkPermissions()
-                startAutoCapture()
-            } else {
-                cameraAccessDenied = true
-            }
-        case .authorized:
-            await cameraModel.checkPermissions()
+        let hasPermission = await cameraService.checkPermissions()
+        if hasPermission {
             startAutoCapture()
-        default:
+        } else {
             cameraAccessDenied = true
         }
     }
     
     func switchCamera() {
-        playHaptic(style: .medium)
-        cameraModel.switchCamera()
+        hapticService.impact(.medium)
+        cameraService.switchCamera()
     }
     
-    // 수동 촬영 - 타이머 정리 후 즉시 촬영
     func capturePhoto() {
-        playHaptic(style: .medium)
-        
-        // 진행 중인 타이머가 있다면 정리
+        hapticService.impact(.medium)
         stopCurrentTimer()
         
-        cameraModel.capturePhoto { [weak self] image in
+        cameraService.capturePhoto { [weak self] image in
             guard let self = self else { return }
             Task { @MainActor in
                 let photo = PhotoModel(uiImage: image)
                 if self.frameModel.addPhoto(photo) {
-                    // 아직 사진이 더 필요하다면 자동 촬영 재시작
                     if !self.frameModel.isComplete {
                         self.scheduleNextPhoto()
                     }
@@ -98,47 +85,45 @@ class CameraViewModel: NSObject {
         countDown = countdownModel.currentCount
     }
     
-    func playHaptic(style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {
-        let generator = UIImpactFeedbackGenerator(style: style)
-        generator.impactOccurred()
+    func startCountdownAndCapture() {
+        if frameModel.isComplete { return }
+        stopCurrentTimer()
+        startCountdownTimer(isManual: true)
     }
+    
+    func openSettings() {
+        if let settingsURL = URL(string: UIApplication.openSettingsURLString),
+           UIApplication.shared.canOpenURL(settingsURL) {
+            UIApplication.shared.open(settingsURL)
+        }
+    }
+    
+    // MARK: - Private Methods
     
     private func startAutoCapture() {
         frameModel.reset()
         scheduleNextPhoto()
     }
     
-    // 수동 촬영을 위한 카운트다운 시작
-    func startCountdownAndCapture() {
-        if frameModel.isComplete { return }
-        
-        stopCurrentTimer() // 기존 타이머 정리
-        startCountdownTimer(isManual: true)
-    }
-    
-    // 타이머 정리 함수
     private func stopCurrentTimer() {
         currentTimer?.invalidate()
         currentTimer = nil
         countdownModel.stop()
     }
     
-    // 다음 사진을 위한 카운트다운 예약
     private func scheduleNextPhoto() {
         if frameModel.isComplete { return }
         
         stopCurrentTimer()
         
-        // 짧은 딜레이 후 카운트다운 시작 (자연스러운 전환을 위해)
         Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5초 대기
+            try? await Task.sleep(nanoseconds: 500_000_000)
             if !self.frameModel.isComplete {
                 self.startCountdownTimer(isManual: false)
             }
         }
     }
     
-    // 통합된 카운트다운 타이머
     private func startCountdownTimer(isManual: Bool) {
         countdownModel.reset()
         countdownModel.start()
@@ -152,7 +137,6 @@ class CameraViewModel: NSObject {
             
             Task { @MainActor in
                 if self.countdownModel.tick() {
-                    // 카운트다운 완료
                     timer.invalidate()
                     self.currentTimer = nil
                     self.countDown = 0
@@ -165,13 +149,12 @@ class CameraViewModel: NSObject {
     }
     
     private func capturePhotoAuto(isManual: Bool) {
-        playHaptic(style: .medium)
-        cameraModel.capturePhoto { [weak self] image in
+        hapticService.impact(.medium)
+        cameraService.capturePhoto { [weak self] image in
             guard let self = self else { return }
             Task { @MainActor in
                 let photo = PhotoModel(uiImage: image)
                 if self.frameModel.addPhoto(photo) {
-                    // 수동 촬영이 아니고 아직 사진이 더 필요하다면 다음 촬영 예약
                     if !isManual && !self.frameModel.isComplete {
                         self.scheduleNextPhoto()
                     }
@@ -180,14 +163,12 @@ class CameraViewModel: NSObject {
         }
     }
     
-    func openSettings() {
-        if let settingsURL = URL(string: UIApplication.openSettingsURLString),
-           UIApplication.shared.canOpenURL(settingsURL) {
-            UIApplication.shared.open(settingsURL)
-        }
-    }
-    
+    // deinit은 메인 액터 격리에서 제외
     deinit {
-        stopCurrentTimer()
+        // 타이머 정리를 메인 스레드에서 안전하게 처리
+        Task { @MainActor in
+            self.currentTimer?.invalidate()
+            self.currentTimer = nil
+        }
     }
 }

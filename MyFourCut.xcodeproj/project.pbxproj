@@ -271,9 +271,10 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MyFourCut/Info.plist;
-				INFOPLIST_KEY_NSCameraUsageDescription = "카메라를 쓰고 싶어용";
-				INFOPLIST_KEY_NSDesktopFolderUsageDescription = "사진 공유하려면 해야 됨";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "나만의 네컷을 앨범에 저장하려면 접근 권한이 필요합니다.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "카메라를 사용하려면 접근 권한이 필요합니다.";
+				INFOPLIST_KEY_NSDesktopFolderUsageDescription = "공유 기능을 사용하려면 접근 권한이 필요합니다.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "완성된 네컷 사진을 사진 라이브러리에 저장합니다.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "네컷 사진을 만들기 위해 사진 라이브러리에서 사진을 선택합니다.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -305,9 +306,10 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MyFourCut/Info.plist;
-				INFOPLIST_KEY_NSCameraUsageDescription = "카메라를 쓰고 싶어용";
-				INFOPLIST_KEY_NSDesktopFolderUsageDescription = "사진 공유하려면 해야 됨";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "나만의 네컷을 앨범에 저장하려면 접근 권한이 필요합니다.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "카메라를 사용하려면 접근 권한이 필요합니다.";
+				INFOPLIST_KEY_NSDesktopFolderUsageDescription = "공유 기능을 사용하려면 접근 권한이 필요합니다.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "완성된 네컷 사진을 사진 라이브러리에 저장합니다.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "네컷 사진을 만들기 위해 사진 라이브러리에서 사진을 선택합니다.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
