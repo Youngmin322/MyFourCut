@@ -20,8 +20,17 @@ class CameraViewModel {
     private var frameModel = FourCutFrameModel()
     private var countdownModel = CountdownModel()
     
-    // Timer - nonisolated로 선언하여 deinit에서 접근 가능하게 함
-    private nonisolated(unsafe) var currentTimer: Timer?
+    // Timer를 클래스로 래핑하여 참조 타입으로 관리
+    private final class TimerContainer {
+        var timer: Timer?
+        
+        func invalidate() {
+            timer?.invalidate()
+            timer = nil
+        }
+    }
+    
+    private let timerContainer = TimerContainer()
     
     // Published Properties
     var shouldNavigateToContent = false
@@ -107,8 +116,7 @@ class CameraViewModel {
     }
     
     private func stopCurrentTimer() {
-        currentTimer?.invalidate()
-        currentTimer = nil
+        timerContainer.invalidate()
         countdownModel.stop()
     }
     
@@ -132,7 +140,7 @@ class CameraViewModel {
         countDown = countdownModel.currentCount
         
         // weak self를 사용하여 순환 참조 방지
-        currentTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+        timerContainer.timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
             guard let self = self else {
                 timer.invalidate()
                 return
@@ -146,7 +154,7 @@ class CameraViewModel {
                 
                 if self.countdownModel.tick() {
                     timer.invalidate()
-                    self.currentTimer = nil
+                    self.timerContainer.timer = nil
                     self.countDown = 0
                     self.capturePhotoAuto(isManual: isManual)
                 } else {
@@ -172,10 +180,8 @@ class CameraViewModel {
         }
     }
     
-    // deinit에서 메모리 정리
+    // deinit에서 Timer 정리
     deinit {
-        // Timer를 즉시 정리 (nonisolated(unsafe)로 선언했으므로 접근 가능)
-        currentTimer?.invalidate()
-        currentTimer = nil
+        timerContainer.invalidate()
     }
 }
