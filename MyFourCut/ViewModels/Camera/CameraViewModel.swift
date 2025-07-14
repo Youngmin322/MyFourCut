@@ -20,8 +20,17 @@ class CameraViewModel {
     private var frameModel = FourCutFrameModel()
     private var countdownModel = CountdownModel()
     
-    // Timer
-    private var currentTimer: Timer?
+    // Timer를 클래스로 래핑하여 참조 타입으로 관리
+    private final class TimerContainer {
+        var timer: Timer?
+        
+        func invalidate() {
+            timer?.invalidate()
+            timer = nil
+        }
+    }
+    
+    private let timerContainer = TimerContainer()
     
     // Published Properties
     var shouldNavigateToContent = false
@@ -67,7 +76,8 @@ class CameraViewModel {
         
         cameraService.capturePhoto { [weak self] image in
             guard let self = self else { return }
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
                 let photo = PhotoModel(uiImage: image)
                 if self.frameModel.addPhoto(photo) {
                     if !self.frameModel.isComplete {
@@ -106,8 +116,7 @@ class CameraViewModel {
     }
     
     private func stopCurrentTimer() {
-        currentTimer?.invalidate()
-        currentTimer = nil
+        timerContainer.invalidate()
         countdownModel.stop()
     }
     
@@ -116,7 +125,8 @@ class CameraViewModel {
         
         stopCurrentTimer()
         
-        Task { @MainActor in
+        Task { @MainActor [weak self] in
+            guard let self = self else { return }
             try? await Task.sleep(nanoseconds: 500_000_000)
             if !self.frameModel.isComplete {
                 self.startCountdownTimer(isManual: false)
@@ -129,16 +139,22 @@ class CameraViewModel {
         countdownModel.start()
         countDown = countdownModel.currentCount
         
-        currentTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+        // weak self를 사용하여 순환 참조 방지
+        timerContainer.timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
             guard let self = self else {
                 timer.invalidate()
                 return
             }
             
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
+                guard let self = self else {
+                    timer.invalidate()
+                    return
+                }
+                
                 if self.countdownModel.tick() {
                     timer.invalidate()
-                    self.currentTimer = nil
+                    self.timerContainer.timer = nil
                     self.countDown = 0
                     self.capturePhotoAuto(isManual: isManual)
                 } else {
@@ -152,7 +168,8 @@ class CameraViewModel {
         hapticService.impact(.medium)
         cameraService.capturePhoto { [weak self] image in
             guard let self = self else { return }
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
                 let photo = PhotoModel(uiImage: image)
                 if self.frameModel.addPhoto(photo) {
                     if !isManual && !self.frameModel.isComplete {
@@ -163,12 +180,8 @@ class CameraViewModel {
         }
     }
     
-    // deinit은 메인 액터 격리에서 제외
+    // deinit에서 Timer 정리
     deinit {
-        // 타이머 정리를 메인 스레드에서 안전하게 처리
-        Task { @MainActor in
-            self.currentTimer?.invalidate()
-            self.currentTimer = nil
-        }
+        timerContainer.invalidate()
     }
 }
