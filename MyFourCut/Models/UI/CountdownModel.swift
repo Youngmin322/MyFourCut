@@ -27,7 +27,7 @@ struct CountdownModel {
         currentCount -= 1
         if currentCount == 0 {
             isActive = false
-            return true // 카운트다운 완료
+            return true
         }
         return false
     }

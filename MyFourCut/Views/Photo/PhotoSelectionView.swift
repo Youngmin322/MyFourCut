@@ -11,31 +11,30 @@ import Photos
 
 struct PhotoSelectionView: View {
     @Binding var selectedImages: [Image]
-    @Binding var currentStep: ContentView.ContentStep
-    @State private var galleryImages: [PHAsset] = []
-    @State private var selectedAssets: [PHAsset] = []
+    @Binding var currentStep: ContentStep
+    @State private var viewModel = PhotoSelectionViewModel()
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
             headerView
             
-            // Gallery Grid
-            galleryGrid
-            
-            // Selected Photos Display
-            selectedPhotosDisplay
-            
-            // Bottom Bar
-            bottomBar
+            if viewModel.isLoading {
+                loadingView
+            } else if viewModel.hasPermission {
+                galleryContentView
+            } else {
+                permissionDeniedView
+            }
         }
         .background(Color.white)
         .ignoresSafeArea(.container, edges: .bottom)
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
         .onAppear {
-            requestPhotoLibraryPermission()
+            Task {
+                await viewModel.requestPermissionAndLoadImages()
+            }
         }
     }
     
@@ -60,6 +59,45 @@ struct PhotoSelectionView: View {
         .background(Color.white)
     }
     
+    private var loadingView: some View {
+        VStack {
+            Spacer()
+            ProgressView()
+            Text("사진을 불러오는 중...")
+                .font(.caption)
+                .foregroundColor(.gray)
+            Spacer()
+        }
+    }
+    
+    private var permissionDeniedView: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            Image(systemName: "photo.on.rectangle")
+                .font(.system(size: 60))
+                .foregroundColor(.gray)
+            
+            Text("사진 접근 권한이 필요합니다")
+                .font(.title3)
+                .foregroundColor(.black)
+            
+            Text("설정에서 사진 접근을 허용해주세요")
+                .font(.caption)
+                .foregroundColor(.gray)
+                .multilineTextAlignment(.center)
+            
+            Spacer()
+        }
+    }
+    
+    private var galleryContentView: some View {
+        VStack(spacing: 0) {
+            galleryGrid
+            selectedPhotosDisplay
+            bottomBar
+        }
+    }
+    
     private var galleryGrid: some View {
         ScrollView {
             LazyVGrid(columns: [
@@ -67,7 +105,7 @@ struct PhotoSelectionView: View {
                 GridItem(.flexible(), spacing: 2),
                 GridItem(.flexible(), spacing: 2)
             ], spacing: 2) {
-                ForEach(galleryImages, id: \.localIdentifier) { asset in
+                ForEach(viewModel.galleryImages, id: \.localIdentifier) { asset in
                     galleryImageItem(asset: asset)
                 }
             }
@@ -77,8 +115,8 @@ struct PhotoSelectionView: View {
     }
     
     private func galleryImageItem(asset: PHAsset) -> some View {
-        let isSelected: Bool = selectedAssets.contains(asset)
-        let selectionIndex: Int? = selectedAssets.firstIndex(of: asset)
+        let isSelected = viewModel.isAssetSelected(asset)
+        let selectionIndex = viewModel.getSelectionIndex(for: asset)
         
         return ZStack(alignment: .topTrailing) {
             PhotoAssetView(asset: asset,
@@ -97,31 +135,24 @@ struct PhotoSelectionView: View {
         }
         .contentShape(Rectangle())
         .onTapGesture {
-            if isSelected {
-                selectedAssets.removeAll { $0 == asset }
-                updateSelectedImages()
-            } else if selectedAssets.count < 8 {
-                selectedAssets.append(asset)
-                updateSelectedImages()
-            }
+            viewModel.toggleAssetSelection(asset)
         }
     }
     
     private var selectedPhotosDisplay: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("최소 4장의 사진을 선택해 주세요. (\(selectedAssets.count)/8)")
+            Text("최소 4장의 사진을 선택해 주세요. (\(viewModel.selectedAssets.count)/8)")
                 .font(.system(size: 14))
                 .foregroundColor(.black)
                 .padding(.horizontal)
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(Array(selectedAssets.enumerated()), id: \.offset) { index, asset in
+                    ForEach(Array(viewModel.selectedAssets.enumerated()), id: \.offset) { index, asset in
                         selectedPhotoThumbnail(asset: asset, index: index)
                     }
                     
-                    // 빈 슬롯들 (회색 네모칸)
-                    ForEach(selectedAssets.count..<8, id: \.self) { _ in
+                    ForEach(viewModel.selectedAssets.count..<8, id: \.self) { _ in
                         Rectangle()
                             .fill(Color.gray.opacity(0.3))
                             .frame(width: 60, height: 60)
@@ -139,15 +170,17 @@ struct PhotoSelectionView: View {
             .cornerRadius(8)
             .contentShape(Rectangle())
             .onTapGesture {
-                selectedAssets.remove(at: index)
-                updateSelectedImages()
+                viewModel.removeAsset(at: index)
             }
     }
     
     private var bottomBar: some View {
         Button(action: {
-            if selectedAssets.count >= 4 {
-                currentStep = .framePreview
+            if viewModel.selectedAssets.count >= 4 {
+                Task {
+                    selectedImages = await viewModel.convertSelectedAssetsToImages()
+                    currentStep = .framePreview
+                }
             }
         }) {
             Text("다음")
@@ -156,58 +189,18 @@ struct PhotoSelectionView: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 50)
                 .background(
-                    selectedAssets.count >= 4
+                    viewModel.selectedAssets.count >= 4
                     ? Color.black
                     : Color.gray.opacity(0.3)
                 )
                 .cornerRadius(10)
         }
-        .disabled(selectedAssets.count < 4)
+        .disabled(viewModel.selectedAssets.count < 4)
         .padding()
         .background(Color.white)
     }
-    
-    private func requestPhotoLibraryPermission() {
-        PHPhotoLibrary.requestAuthorization(for: .readWrite) { status in
-            DispatchQueue.main.async {
-                if status == .authorized || status == .limited {
-                    loadGalleryImages()
-                }
-            }
-        }
-    }
-    
-    private func loadGalleryImages() {
-        let fetchOptions = PHFetchOptions()
-        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-        
-        let fetchResult = PHAsset.fetchAssets(with: .image, options: fetchOptions)
-        
-        galleryImages = []
-        fetchResult.enumerateObjects { asset, _, _ in
-            galleryImages.append(asset)
-        }
-    }
-    
-    private func updateSelectedImages() {
-        selectedImages.removeAll()
-        
-        for asset in selectedAssets {
-            let manager = PHImageManager.default()
-            let option = PHImageRequestOptions()
-            option.isSynchronous = true
-            option.deliveryMode = .highQualityFormat
-            
-            manager.requestImage(for: asset, targetSize: CGSize(width: 300, height: 300), contentMode: .aspectFill, options: option) { image, _ in
-                if let image = image {
-                    selectedImages.append(Image(uiImage: image))
-                }
-            }
-        }
-    }
 }
 
-// PhotoAssetView - 크롭해서 보여주도록 수정
 struct PhotoAssetView: View {
     let asset: PHAsset
     let size: CGSize
@@ -234,21 +227,12 @@ struct PhotoAssetView: View {
     }
     
     private func loadImage() {
-        let manager = PHImageManager.default()
-        let option = PHImageRequestOptions()
-        option.deliveryMode = .opportunistic
-        
-        manager.requestImage(for: asset, targetSize: CGSize(width: 200, height: 200), contentMode: .aspectFill, options: option) { image, _ in
-            DispatchQueue.main.async {
-                self.uiImage = image
+        Task {
+            if let image = await PhotoLibraryService.shared.loadImage(from: asset, targetSize: CGSize(width: 200, height: 200)) {
+                await MainActor.run {
+                    self.uiImage = image
+                }
             }
         }
     }
-}
-
-#Preview {
-    PhotoSelectionView(
-        selectedImages: .constant([]),
-        currentStep: .constant(.photoSelection)
-    )
 }
