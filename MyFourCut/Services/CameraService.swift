@@ -33,7 +33,7 @@ class CameraService: NSObject {
         }
     }
     
-    private func startSession() async {
+    func startSession() async {
         if !session.isRunning {
             await Task.detached {
                 self.session.startRunning()
