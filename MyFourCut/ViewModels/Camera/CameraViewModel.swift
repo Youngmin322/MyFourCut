@@ -20,8 +20,8 @@ class CameraViewModel {
     private var frameModel = FourCutFrameModel()
     private var countdownModel = CountdownModel()
     
-    // Timer
-    private var currentTimer: Timer?
+    // Timer - nonisolated로 선언하여 deinit에서 접근 가능하게 함
+    private nonisolated(unsafe) var currentTimer: Timer?
     
     // Published Properties
     var shouldNavigateToContent = false
@@ -67,7 +67,8 @@ class CameraViewModel {
         
         cameraService.capturePhoto { [weak self] image in
             guard let self = self else { return }
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
                 let photo = PhotoModel(uiImage: image)
                 if self.frameModel.addPhoto(photo) {
                     if !self.frameModel.isComplete {
@@ -116,7 +117,8 @@ class CameraViewModel {
         
         stopCurrentTimer()
         
-        Task { @MainActor in
+        Task { @MainActor [weak self] in
+            guard let self = self else { return }
             try? await Task.sleep(nanoseconds: 500_000_000)
             if !self.frameModel.isComplete {
                 self.startCountdownTimer(isManual: false)
@@ -129,13 +131,19 @@ class CameraViewModel {
         countdownModel.start()
         countDown = countdownModel.currentCount
         
+        // weak self를 사용하여 순환 참조 방지
         currentTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
             guard let self = self else {
                 timer.invalidate()
                 return
             }
             
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
+                guard let self = self else {
+                    timer.invalidate()
+                    return
+                }
+                
                 if self.countdownModel.tick() {
                     timer.invalidate()
                     self.currentTimer = nil
@@ -152,7 +160,8 @@ class CameraViewModel {
         hapticService.impact(.medium)
         cameraService.capturePhoto { [weak self] image in
             guard let self = self else { return }
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
                 let photo = PhotoModel(uiImage: image)
                 if self.frameModel.addPhoto(photo) {
                     if !isManual && !self.frameModel.isComplete {
@@ -163,12 +172,10 @@ class CameraViewModel {
         }
     }
     
-    // deinit은 메인 액터 격리에서 제외
+    // deinit에서 메모리 정리
     deinit {
-        // 타이머 정리를 메인 스레드에서 안전하게 처리
-        Task { @MainActor in
-            self.currentTimer?.invalidate()
-            self.currentTimer = nil
-        }
+        // Timer를 즉시 정리 (nonisolated(unsafe)로 선언했으므로 접근 가능)
+        currentTimer?.invalidate()
+        currentTimer = nil
     }
 }
