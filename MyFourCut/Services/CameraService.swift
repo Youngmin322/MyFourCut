@@ -24,7 +24,11 @@ class CameraService: NSObject {
     func checkPermissions() async -> Bool {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .notDetermined:
-            return await AVCaptureDevice.requestAccess(for: .video)
+            let granted = await AVCaptureDevice.requestAccess(for: .video)
+            if granted {
+                await startSession()
+            }
+            return granted
         case .authorized:
             await startSession()
             return true
