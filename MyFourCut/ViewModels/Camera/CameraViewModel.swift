@@ -59,6 +59,8 @@ class CameraViewModel {
     func checkCameraAccess() async {
         let hasPermission = await cameraService.checkPermissions()
         if hasPermission {
+            // 권한이 허용되었으면 카메라 세션을 명시적으로 시작
+            await cameraService.startSession()
             startAutoCapture()
         } else {
             cameraAccessDenied = true
