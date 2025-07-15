@@ -11,6 +11,7 @@ struct CameraView: View {
     @State private var viewModel = CameraViewModel()
     @Binding var displayedImages: [Image?]
     @Environment(\.dismiss) var dismiss
+    @State private var orientation = UIDevice.current.orientation
     
     var body: some View {
         ZStack {
@@ -32,6 +33,21 @@ struct CameraView: View {
         }
         .onDisappear {
             viewModel.resetImages()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
+            orientation = UIDevice.current.orientation
+        }
+        .onAppear {
+            // 카메라 화면에서는 모든 방향 허용
+            if let delegate = UIApplication.shared.delegate as? AppDelegate {
+                delegate.setOrientationLock(.all)
+            }
+        }
+        .onDisappear {
+            // 카메라 화면을 벗어나면 필요에 따라 제한 (예: 세로모드만)
+            // if let delegate = UIApplication.shared.delegate as? AppDelegate {
+            //     delegate.setOrientationLock(.portrait)
+            // }
         }
         .navigationDestination(isPresented: $viewModel.shouldNavigateToContent) {
             ContentView(initialImages: viewModel.displayedImages)
@@ -161,16 +177,88 @@ struct CameraView: View {
 struct CameraPreview: UIViewRepresentable {
     let session: AVCaptureSession
     
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView(frame: UIScreen.main.bounds)
-        let previewLayer = AVCaptureVideoPreviewLayer(session: session)
-        previewLayer.frame = view.frame
-        previewLayer.videoGravity = .resizeAspectFill
-        view.layer.addSublayer(previewLayer)
+    func makeUIView(context: Context) -> CameraPreviewUIView {
+        let view = CameraPreviewUIView(session: session)
         return view
     }
     
-    func updateUIView(_ uiView: UIView, context: Context) {}
+    func updateUIView(_ uiView: CameraPreviewUIView, context: Context) {
+        // 세션이 변경되었을 때만 업데이트
+        if uiView.previewLayer.session != session {
+            uiView.previewLayer.session = session
+        }
+    }
+}
+
+class CameraPreviewUIView: UIView {
+    private let session: AVCaptureSession
+    
+    override class var layerClass: AnyClass {
+        return AVCaptureVideoPreviewLayer.self
+    }
+    
+    var previewLayer: AVCaptureVideoPreviewLayer {
+        return layer as! AVCaptureVideoPreviewLayer
+    }
+    
+    init(session: AVCaptureSession) {
+        self.session = session
+        super.init(frame: .zero)
+        
+        previewLayer.session = session
+        previewLayer.videoGravity = .resizeAspectFill
+        
+        // 디바이스 회전 감지
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(orientationChanged),
+            name: UIDevice.orientationDidChangeNotification,
+            object: nil
+        )
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        previewLayer.frame = bounds
+        updateVideoOrientation()
+    }
+    
+    @objc private func orientationChanged() {
+        DispatchQueue.main.async {
+            self.updateVideoOrientation()
+        }
+    }
+    
+    private func updateVideoOrientation() {
+        guard let connection = previewLayer.connection,
+              connection.isVideoOrientationSupported else { return }
+        
+        let orientation = UIDevice.current.orientation
+        let videoOrientation: AVCaptureVideoOrientation
+        
+        switch orientation {
+        case .portrait:
+            videoOrientation = .portrait
+        case .portraitUpsideDown:
+            videoOrientation = .portraitUpsideDown
+        case .landscapeLeft:
+            videoOrientation = .landscapeRight
+        case .landscapeRight:
+            videoOrientation = .landscapeLeft
+        default:
+            videoOrientation = .portrait
+        }
+        
+        connection.videoOrientation = videoOrientation
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
 }
 
 #Preview {
