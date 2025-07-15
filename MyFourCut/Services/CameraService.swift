@@ -60,6 +60,13 @@ class CameraService: NSObject {
                 if session.canAddOutput(output) {
                     session.addOutput(output)
                 }
+                
+                // 회전 지원 설정
+                if let connection = output.connection(with: .video) {
+                    if connection.isVideoOrientationSupported {
+                        connection.videoOrientation = .portrait
+                    }
+                }
             }
             
             session.commitConfiguration()
@@ -94,7 +101,51 @@ class CameraService: NSObject {
     func capturePhoto(completion: @escaping (UIImage) -> Void) {
         photoCompletion = completion
         let settings = AVCapturePhotoSettings()
+        
+        // 현재 디바이스 방향에 따라 사진 방향 설정
+        if let connection = output.connection(with: .video) {
+            updatePhotoOrientation(connection: connection)
+        }
+        
         output.capturePhoto(with: settings, delegate: self)
+    }
+    
+    private func updatePhotoOrientation(connection: AVCaptureConnection) {
+        guard connection.isVideoOrientationSupported else { return }
+        
+        let orientation = UIDevice.current.orientation
+        let videoOrientation: AVCaptureVideoOrientation
+        
+        switch orientation {
+        case .portrait:
+            videoOrientation = .portrait
+        case .portraitUpsideDown:
+            videoOrientation = .portraitUpsideDown
+        case .landscapeLeft:
+            videoOrientation = .landscapeRight
+        case .landscapeRight:
+            videoOrientation = .landscapeLeft
+        default:
+            // 알 수 없는 방향일 때는 인터페이스 방향을 기준으로 설정
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                switch windowScene.interfaceOrientation {
+                case .portrait:
+                    videoOrientation = .portrait
+                case .portraitUpsideDown:
+                    videoOrientation = .portraitUpsideDown
+                case .landscapeLeft:
+                    videoOrientation = .landscapeLeft
+                case .landscapeRight:
+                    videoOrientation = .landscapeRight
+                default:
+                    videoOrientation = .portrait
+                }
+            } else {
+                videoOrientation = .portrait
+            }
+        }
+        
+        connection.videoOrientation = videoOrientation
     }
 }
 
