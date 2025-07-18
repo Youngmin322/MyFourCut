@@ -9,15 +9,46 @@ import SwiftUI
 
 struct FrameImages: View {
     @Binding var displayedImages: [Image?]
-    var backgroundImage: String?
+    var selectedBackground: BackgroundModel  // BackgroundModel 사용
     var showCloseButton: Bool = true
+    
+    // 기존 코드와의 호환성을 위한 생성자 (deprecated)
+    init(displayedImages: Binding<[Image?]>, backgroundImage: String?, showCloseButton: Bool = true) {
+        self._displayedImages = displayedImages
+        
+        // String을 BackgroundModel로 변환
+        if let backgroundImage = backgroundImage,
+           let background = BackgroundModel.defaultBackgrounds.first(where: { $0.imageName == backgroundImage }) {
+            self.selectedBackground = background
+        } else {
+            self.selectedBackground = BackgroundModel.defaultBackgrounds[0]
+        }
+        
+        self.showCloseButton = showCloseButton
+    }
+    
+    // 새로운 생성자 (BackgroundModel 사용)
+    init(displayedImages: Binding<[Image?]>, selectedBackground: BackgroundModel, showCloseButton: Bool = true) {
+        self._displayedImages = displayedImages
+        self.selectedBackground = selectedBackground
+        self.showCloseButton = showCloseButton
+    }
     
     var body: some View {
         ZStack {
             Color.white.ignoresSafeArea()
             
-            if let bgImage = backgroundImage, let uiImage = UIImage(named: bgImage) {
-                Image(uiImage: uiImage)
+            // 배경 이미지 렌더링
+            if selectedBackground.isCustom, let customImage = selectedBackground.customImage {
+                // 커스텀 이미지 사용
+                Image(uiImage: customImage)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 300, height: 500)
+                    .clipped()
+            } else if let imageName = selectedBackground.imageName {
+                // 기본 번들 이미지 사용
+                Image(imageName)
                     .resizable()
                     .scaledToFill()
                     .frame(width: 300, height: 500)

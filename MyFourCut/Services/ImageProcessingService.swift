@@ -5,11 +5,6 @@
 //  Created by 조영민 on 7/14/25.
 //
 
-//
-//  ImageProcessingService.swift
-//  MyFourCut
-//
-
 import SwiftUI
 import UIKit
 
@@ -31,16 +26,17 @@ class ImageProcessingService {
         rootVC.present(activityVC, animated: true)
     }
     
+    // 새로운 메서드: BackgroundModel 사용
     func renderFrameImage(
         displayedImages: [Image?],
-        backgroundImage: String?,
+        selectedBackground: BackgroundModel,
         selectedFilter: FilterType
     ) -> UIImage? {
         let renderer = ImageRenderer(content:
             ZStack {
                 FrameImages(
                     displayedImages: .constant(displayedImages),
-                    backgroundImage: backgroundImage,
+                    selectedBackground: selectedBackground,
                     showCloseButton: false
                 )
                 .frame(width: 300, height: 500)
@@ -60,6 +56,28 @@ class ImageProcessingService {
         )
         renderer.scale = UIScreen.main.scale
         return renderer.uiImage
+    }
+    
+    // 기존 메서드: 호환성을 위해 유지 (deprecated)
+    func renderFrameImage(
+        displayedImages: [Image?],
+        backgroundImage: String?,
+        selectedFilter: FilterType
+    ) -> UIImage? {
+        // 기본 배경을 찾아서 새로운 메서드 호출
+        let background: BackgroundModel
+        if let backgroundImage = backgroundImage,
+           let foundBackground = BackgroundModel.defaultBackgrounds.first(where: { $0.imageName == backgroundImage }) {
+            background = foundBackground
+        } else {
+            background = BackgroundModel.defaultBackgrounds[0] // 기본 배경
+        }
+        
+        return renderFrameImage(
+            displayedImages: displayedImages,
+            selectedBackground: background,
+            selectedFilter: selectedFilter
+        )
     }
     
     private func getBlendMode(for filter: FilterType) -> BlendMode {

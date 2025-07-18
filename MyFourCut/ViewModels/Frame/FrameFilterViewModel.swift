@@ -31,6 +31,31 @@ class FrameFilterViewModel {
         selectedFilter = filter
     }
     
+    // 새로운 메서드: BackgroundModel 사용
+    func savePhoto(displayedImages: [Image?], selectedBackground: BackgroundModel) {
+        guard let image = imageProcessingService.renderFrameImage(
+            displayedImages: displayedImages,
+            selectedBackground: selectedBackground,
+            selectedFilter: selectedFilter
+        ) else { return }
+        
+        imageProcessingService.saveToPhotoAlbum(image)
+        showingSaveAlert = true
+        hapticService.notification(.success)
+    }
+    
+    func sharePhoto(displayedImages: [Image?], selectedBackground: BackgroundModel) {
+        guard let image = imageProcessingService.renderFrameImage(
+            displayedImages: displayedImages,
+            selectedBackground: selectedBackground,
+            selectedFilter: selectedFilter
+        ) else { return }
+        
+        imageProcessingService.shareImage(image)
+        hapticService.impact(.medium)
+    }
+    
+    // 기존 메서드: 호환성을 위해 유지 (deprecated)
     func savePhoto(displayedImages: [Image?], backgroundImage: String?) {
         guard let image = imageProcessingService.renderFrameImage(
             displayedImages: displayedImages,

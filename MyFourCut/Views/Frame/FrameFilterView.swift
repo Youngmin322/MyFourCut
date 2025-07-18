@@ -11,6 +11,8 @@ struct FrameFilterView: View {
     var viewModel: ContentViewModel
     @Binding var currentStep: ContentStep
     @State private var frameFilterViewModel = FrameFilterViewModel()
+    @State private var showingCustomFrameSelection = false
+    @StateObject private var customFrameService = CustomFrameService.shared
     
     var body: some View {
         VStack(spacing: 0) {
@@ -27,6 +29,12 @@ struct FrameFilterView: View {
             Button("확인", role: .cancel) { }
         } message: {
             Text("이미지가 앨범에 저장되었습니다.")
+        }
+        .sheet(isPresented: $showingCustomFrameSelection) {
+            CustomFrameSelectionView(isPresented: $showingCustomFrameSelection) { newFrame in
+                // 새 프레임이 추가되면 자동으로 선택
+                viewModel.selectBackground(newFrame)
+            }
         }
     }
     
@@ -51,7 +59,7 @@ struct FrameFilterView: View {
             Button(action: {
                 frameFilterViewModel.sharePhoto(
                     displayedImages: viewModel.displayedImages,
-                    backgroundImage: viewModel.backgroundImage
+                    selectedBackground: viewModel.selectedBackground
                 )
             }) {
                 Image(systemName: "square.and.arrow.up")
@@ -68,7 +76,7 @@ struct FrameFilterView: View {
         ZStack {
             FrameImages(
                 displayedImages: Bindable(viewModel).displayedImages,
-                backgroundImage: viewModel.backgroundImage,
+                selectedBackground: viewModel.selectedBackground,
                 showCloseButton: true
             )
             .frame(width: 300, height: 500)
@@ -127,11 +135,42 @@ struct FrameFilterView: View {
     
     @ViewBuilder
     private var frameOptions: some View {
-        ForEach(viewModel.backgroundImages, id: \.self) { imageName in
+        // 기본 프레임들
+        ForEach(BackgroundModel.defaultBackgrounds, id: \.id) { background in
             FrameOptionButton(
-                imageName: imageName,
-                isSelected: viewModel.backgroundImage == imageName,
-                action: { viewModel.selectBackgroundImage(imageName) }
+                background: background,
+                isSelected: viewModel.selectedBackground.id == background.id,
+                action: { viewModel.selectBackground(background) }
+            )
+        }
+        
+        // 커스텀 프레임 추가 버튼
+        Button(action: {
+            showingCustomFrameSelection = true
+        }) {
+            VStack {
+                Circle()
+                    .stroke(Color.gray, style: StrokeStyle(lineWidth: 2, dash: [5]))
+                    .frame(width: 60, height: 60)
+                    .overlay(
+                        Image(systemName: "plus")
+                            .font(.system(size: 24))
+                            .foregroundColor(.gray)
+                    )
+                
+                Text("추가")
+                    .font(.system(size: 12))
+                    .foregroundColor(.gray)
+            }
+        }
+        
+        // 커스텀 프레임들
+        ForEach(customFrameService.customFrames, id: \.id) { background in
+            CustomFrameOptionButton(
+                background: background,
+                isSelected: viewModel.selectedBackground.id == background.id,
+                action: { viewModel.selectBackground(background) },
+                onDelete: { customFrameService.removeCustomFrame(background) }
             )
         }
     }
@@ -151,7 +190,7 @@ struct FrameFilterView: View {
         Button(action: {
             frameFilterViewModel.savePhoto(
                 displayedImages: viewModel.displayedImages,
-                backgroundImage: viewModel.backgroundImage
+                selectedBackground: viewModel.selectedBackground
             )
         }) {
             Text("사진 저장")
@@ -195,42 +234,83 @@ struct TabButton: View {
 }
 
 struct FrameOptionButton: View {
-    let imageName: String
+    let background: BackgroundModel
     let isSelected: Bool
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
             VStack {
-                Image(imageName)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 60, height: 60)
-                    .clipShape(Circle())
-                    .overlay(
-                        Circle()
-                            .stroke(
-                                isSelected ? Color.black : Color.gray,
-                                lineWidth: isSelected ? 3 : 1
-                            )
-                    )
+                if let imageName = background.imageName {
+                    Image(imageName)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 60, height: 60)
+                        .clipShape(Circle())
+                        .overlay(
+                            Circle()
+                                .stroke(
+                                    isSelected ? Color.black : Color.gray,
+                                    lineWidth: isSelected ? 3 : 1
+                                )
+                        )
+                }
                 
-                Text(frameNameForImage(imageName))
+                Text(background.displayName)
                     .font(.system(size: 12))
                     .foregroundColor(.black)
             }
         }
     }
+}
+
+struct CustomFrameOptionButton: View {
+    let background: BackgroundModel
+    let isSelected: Bool
+    let action: () -> Void
+    let onDelete: () -> Void
     
-    private func frameNameForImage(_ imageName: String) -> String {
-        switch imageName {
-        case "bg0": return "기본"
-        case "bg1": return "그림"
-        case "bg2": return "하트"
-        case "bg3": return "구름"
-        case "bg4": return "패턴"
-        case "bg5": return "강아지"
-        default: return "프레임"
+    var body: some View {
+        VStack {
+            ZStack {
+                if let customImage = background.customImage {
+                    Image(uiImage: customImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 60, height: 60)
+                        .clipShape(Circle())
+                        .overlay(
+                            Circle()
+                                .stroke(
+                                    isSelected ? Color.black : Color.gray,
+                                    lineWidth: isSelected ? 3 : 1
+                                )
+                        )
+                }
+                
+                // 삭제 버튼
+                VStack {
+                    HStack {
+                        Spacer()
+                        Button(action: onDelete) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.red)
+                                .background(Color.white, in: Circle())
+                                .font(.system(size: 16))
+                        }
+                    }
+                    Spacer()
+                }
+                .frame(width: 60, height: 60)
+            }
+            .onTapGesture {
+                action()
+            }
+            
+            Text(background.displayName)
+                .font(.system(size: 12))
+                .foregroundColor(.black)
+                .lineLimit(1)
         }
     }
 }
