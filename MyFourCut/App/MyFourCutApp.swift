@@ -34,7 +34,8 @@ struct MyFourCutApp: App {
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            Item.self,          // 기존 모델
+            CustomFrame.self    // 새로 추가된 커스텀 프레임 모델
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -48,6 +49,10 @@ struct MyFourCutApp: App {
     var body: some Scene {
         WindowGroup {
             StartView()
+                .onAppear {
+                    // CustomFrameService에 ModelContext 설정
+                    CustomFrameService.shared.setModelContext(sharedModelContainer.mainContext)
+                }
         }
         .modelContainer(sharedModelContainer)
     }
