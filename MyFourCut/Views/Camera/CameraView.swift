@@ -44,10 +44,7 @@ struct CameraView: View {
             }
         }
         .onDisappear {
-            // 카메라 화면을 벗어나면 필요에 따라 제한 (예: 세로모드만)
-            // if let delegate = UIApplication.shared.delegate as? AppDelegate {
-            //     delegate.setOrientationLock(.portrait)
-            // }
+            
         }
         .navigationDestination(isPresented: $viewModel.shouldNavigateToContent) {
             ContentView(initialImages: viewModel.displayedImages)
