@@ -59,7 +59,7 @@ struct FrameFilterView: View {
             Button(action: {
                 frameFilterViewModel.sharePhoto(
                     displayedImages: viewModel.displayedImages,
-                    selectedBackground: viewModel.selectedBackground
+                    selectedBackground: viewModel.selectedBackground,
                 )
             }) {
                 Image(systemName: "square.and.arrow.up")
@@ -140,7 +140,10 @@ struct FrameFilterView: View {
             FrameOptionButton(
                 background: background,
                 isSelected: viewModel.selectedBackground.id == background.id,
-                action: { viewModel.selectBackground(background) }
+                action: {
+                    viewModel.selectBackground(background)
+                    frameFilterViewModel.selectTab(.frame)
+                }
             )
         }
         
