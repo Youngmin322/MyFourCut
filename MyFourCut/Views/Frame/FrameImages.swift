@@ -12,7 +12,6 @@ struct FrameImages: View {
     var selectedBackground: BackgroundModel  // BackgroundModel 사용
     var showCloseButton: Bool = true
     
-    // 기존 코드와의 호환성을 위한 생성자 (deprecated)
     init(displayedImages: Binding<[Image?]>, backgroundImage: String?, showCloseButton: Bool = true) {
         self._displayedImages = displayedImages
         
@@ -27,7 +26,6 @@ struct FrameImages: View {
         self.showCloseButton = showCloseButton
     }
     
-    // 새로운 생성자 (BackgroundModel 사용)
     init(displayedImages: Binding<[Image?]>, selectedBackground: BackgroundModel, showCloseButton: Bool = true) {
         self._displayedImages = displayedImages
         self.selectedBackground = selectedBackground

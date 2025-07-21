@@ -32,7 +32,6 @@ class ContentViewModel {
         frameModel.selectedBackground
     }
     
-    // 기존 코드와의 호환성을 위해 유지 (deprecated)
     let backgroundImages = BackgroundModel.defaultBackgrounds.compactMap { $0.imageName }
     
     // 모든 배경 (기본 + 커스텀)
@@ -99,12 +98,10 @@ class ContentViewModel {
         imageProcessingService.shareImage(image)
     }
     
-    // 새로운 메서드: BackgroundModel로 배경 선택
     func selectBackground(_ background: BackgroundModel) {
         frameModel.changeBackground(background)
     }
     
-    // 기존 메서드: 호환성을 위해 유지 (deprecated)
     func selectBackgroundImage(_ imageName: String) {
         if let background = BackgroundModel.defaultBackgrounds.first(where: { $0.imageName == imageName }) {
             frameModel.changeBackground(background)

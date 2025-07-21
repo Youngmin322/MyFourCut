@@ -59,7 +59,7 @@ struct FrameFilterView: View {
             Button(action: {
                 frameFilterViewModel.sharePhoto(
                     displayedImages: viewModel.displayedImages,
-                    selectedBackground: viewModel.selectedBackground
+                    selectedBackground: viewModel.selectedBackground,
                 )
             }) {
                 Image(systemName: "square.and.arrow.up")
@@ -140,7 +140,20 @@ struct FrameFilterView: View {
             FrameOptionButton(
                 background: background,
                 isSelected: viewModel.selectedBackground.id == background.id,
-                action: { viewModel.selectBackground(background) }
+                action: {
+                    viewModel.selectBackground(background)
+                    frameFilterViewModel.selectTab(.frame)
+                }
+            )
+        }
+        
+        // 커스텀 프레임들
+        ForEach(customFrameService.customFrames, id: \.id) { background in
+            CustomFrameOptionButton(
+                background: background,
+                isSelected: viewModel.selectedBackground.id == background.id,
+                action: { viewModel.selectBackground(background) },
+                onDelete: { customFrameService.removeCustomFrame(background) }
             )
         }
         
@@ -162,16 +175,6 @@ struct FrameFilterView: View {
                     .font(.system(size: 12))
                     .foregroundColor(.gray)
             }
-        }
-        
-        // 커스텀 프레임들
-        ForEach(customFrameService.customFrames, id: \.id) { background in
-            CustomFrameOptionButton(
-                background: background,
-                isSelected: viewModel.selectedBackground.id == background.id,
-                action: { viewModel.selectBackground(background) },
-                onDelete: { customFrameService.removeCustomFrame(background) }
-            )
         }
     }
     
