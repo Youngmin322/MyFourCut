@@ -189,7 +189,6 @@ struct CameraPreview: UIViewRepresentable {
 
 class CameraPreviewUIView: UIView {
     private let session: AVCaptureSession
-    private var rotationCoordinator: AVCaptureDevice.RotationCoordinator?
     
     override class var layerClass: AnyClass {
         return AVCaptureVideoPreviewLayer.self
@@ -206,8 +205,6 @@ class CameraPreviewUIView: UIView {
         previewLayer.session = session
         previewLayer.videoGravity = .resizeAspectFill
         
-        setupRotationCoordinator()
-        
         // 디바이스 회전 감지
         NotificationCenter.default.addObserver(
             self,
@@ -215,18 +212,13 @@ class CameraPreviewUIView: UIView {
             name: UIDevice.orientationDidChangeNotification,
             object: nil
         )
+        
+        // 초기 방향 설정
+        updateVideoOrientation()
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-    
-    private func setupRotationCoordinator() {
-        guard let videoInput = session.inputs.first(where: { $0 is AVCaptureDeviceInput }) as? AVCaptureDeviceInput else {
-            return
-        }
-        
-        rotationCoordinator = AVCaptureDevice.RotationCoordinator(device: videoInput.device, previewLayer: previewLayer)
     }
     
     override func layoutSubviews() {
@@ -242,27 +234,26 @@ class CameraPreviewUIView: UIView {
     }
     
     private func updateVideoOrientation() {
-        guard let connection = previewLayer.connection,
-              connection.isVideoRotationAngleSupported(0) else { return }
+        guard let connection = previewLayer.connection else { return }
         
         let orientation = UIDevice.current.orientation
-        let rotationAngle: CGFloat
+        let videoOrientation: AVCaptureVideoOrientation
         
         switch orientation {
         case .portrait:
-            rotationAngle = 0
+            videoOrientation = .portrait
         case .portraitUpsideDown:
-            rotationAngle = 180
+            videoOrientation = .portraitUpsideDown
         case .landscapeLeft:
-            rotationAngle = 90
+            videoOrientation = .landscapeRight
         case .landscapeRight:
-            rotationAngle = -90
+            videoOrientation = .landscapeLeft
         default:
-            rotationAngle = 0
+            videoOrientation = .portrait
         }
         
-        if connection.isVideoRotationAngleSupported(rotationAngle) {
-            connection.videoRotationAngle = rotationAngle
+        if connection.isVideoOrientationSupported {
+            connection.videoOrientation = videoOrientation
         }
     }
     
