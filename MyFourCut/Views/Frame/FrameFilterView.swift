@@ -18,6 +18,7 @@ struct FrameFilterView: View {
         VStack(spacing: 0) {
             headerView
             framePreview
+            Spacer()
             selectionSection
             Spacer()
             saveButton
