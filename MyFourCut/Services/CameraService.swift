@@ -15,6 +15,7 @@ class CameraService: NSObject {
     private var input: AVCaptureDeviceInput?
     private let output = AVCapturePhotoOutput()
     private var photoCompletion: ((UIImage) -> Void)?
+    private var rotationCoordinator: AVCaptureDevice.RotationCoordinator?
     
     override init() {
         super.init()
@@ -61,10 +62,14 @@ class CameraService: NSObject {
                     session.addOutput(output)
                 }
                 
-                // 회전 지원 설정
+                // 회전 코디네이터 설정
+                setupRotationCoordinator()
+                
+                // 회전 설정
                 if let connection = output.connection(with: .video) {
-                    if connection.isVideoRotationAngleSupported(0) {
-                        connection.videoRotationAngle = 0
+                    let rotationAngle: CGFloat = 0
+                    if connection.isVideoRotationAngleSupported(rotationAngle) {
+                        connection.videoRotationAngle = rotationAngle
                     }
                 }
             }
@@ -72,6 +77,12 @@ class CameraService: NSObject {
             session.commitConfiguration()
         } catch {
             print("카메라 설정 오류: \(error.localizedDescription)")
+        }
+    }
+    
+    private func setupRotationCoordinator() {
+        if let camera = camera {
+            rotationCoordinator = AVCaptureDevice.RotationCoordinator(device: camera, previewLayer: nil)
         }
     }
     
@@ -91,6 +102,9 @@ class CameraService: NSObject {
                     session.addInput(newInput)
                     input = newInput
                     camera = newCamera
+                    
+                    // 새 카메라로 회전 코디네이터 업데이트
+                    setupRotationCoordinator()
                 }
                 
                 session.commitConfiguration()

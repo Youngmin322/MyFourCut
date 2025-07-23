@@ -189,6 +189,7 @@ struct CameraPreview: UIViewRepresentable {
 
 class CameraPreviewUIView: UIView {
     private let session: AVCaptureSession
+    private var rotationCoordinator: AVCaptureDevice.RotationCoordinator?
     
     override class var layerClass: AnyClass {
         return AVCaptureVideoPreviewLayer.self
@@ -204,6 +205,9 @@ class CameraPreviewUIView: UIView {
         
         previewLayer.session = session
         previewLayer.videoGravity = .resizeAspectFill
+        
+        // 회전 코디네이터 설정
+        setupRotationCoordinator()
         
         // 디바이스 회전 감지
         NotificationCenter.default.addObserver(
@@ -227,6 +231,13 @@ class CameraPreviewUIView: UIView {
         updateVideoOrientation()
     }
     
+    private func setupRotationCoordinator() {
+        // 현재 활성 카메라 장치를 찾아서 회전 코디네이터 설정
+        if let input = session.inputs.first as? AVCaptureDeviceInput {
+            rotationCoordinator = AVCaptureDevice.RotationCoordinator(device: input.device, previewLayer: previewLayer)
+        }
+    }
+    
     @objc private func orientationChanged() {
         DispatchQueue.main.async {
             self.updateVideoOrientation()
@@ -236,25 +247,49 @@ class CameraPreviewUIView: UIView {
     private func updateVideoOrientation() {
         guard let connection = previewLayer.connection else { return }
         
+        let rotationAngle = getRotationAngleForCurrentOrientation()
+        
+        if connection.isVideoRotationAngleSupported(rotationAngle) {
+            connection.videoRotationAngle = rotationAngle
+        }
+    }
+    
+    private func getRotationAngleForCurrentOrientation() -> CGFloat {
         let orientation = UIDevice.current.orientation
-        let videoOrientation: AVCaptureVideoOrientation
         
         switch orientation {
         case .portrait:
-            videoOrientation = .portrait
+            return 0
         case .portraitUpsideDown:
-            videoOrientation = .portraitUpsideDown
+            return 180
         case .landscapeLeft:
-            videoOrientation = .landscapeRight
+            return 90
         case .landscapeRight:
-            videoOrientation = .landscapeLeft
+            return -90
         default:
-            videoOrientation = .portrait
+            // 알 수 없는 방향일 때는 인터페이스 방향을 기준으로 설정
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                switch windowScene.interfaceOrientation {
+                case .portrait:
+                    return 0
+                case .portraitUpsideDown:
+                    return 180
+                case .landscapeLeft:
+                    return -90
+                case .landscapeRight:
+                    return 90
+                default:
+                    return 0
+                }
+            } else {
+                return 0
+            }
         }
-        
-        if connection.isVideoOrientationSupported {
-            connection.videoOrientation = videoOrientation
-        }
+    }
+    
+    // 세션이 변경될 때 회전 코디네이터를 다시 설정하는 메서드
+    func updateRotationCoordinator() {
+        setupRotationCoordinator()
     }
     
     deinit {
