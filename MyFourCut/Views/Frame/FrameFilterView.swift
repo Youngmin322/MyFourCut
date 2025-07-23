@@ -50,12 +50,6 @@ struct FrameFilterView: View {
             
             Spacer()
             
-            Text("프레임")
-                .font(.system(size: 20, weight: .bold))
-                .foregroundColor(.black)
-            
-            Spacer()
-            
             Button(action: {
                 frameFilterViewModel.sharePhoto(
                     displayedImages: viewModel.displayedImages,
