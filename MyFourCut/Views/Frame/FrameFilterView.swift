@@ -17,13 +17,10 @@ struct FrameFilterView: View {
     var body: some View {
         VStack(spacing: 0) {
             headerView
-            
-            ScrollView {
-                framePreview
-                selectionSection
-                Spacer()
-                saveButton
-            }
+            framePreview
+            selectionSection
+            Spacer()
+            saveButton
         }
         .alert("저장 완료", isPresented: $frameFilterViewModel.showingSaveAlert) {
             Button("확인", role: .cancel) { }
@@ -67,13 +64,38 @@ struct FrameFilterView: View {
     }
     
     private var framePreview: some View {
-        ZStack {
-            FrameImages(
+        GeometryReader { geometry in
+            frameContent(for: geometry.size)
+        }
+        .frame(maxHeight: .infinity)
+    }
+    
+    private func frameContent(for size: CGSize) -> some View {
+        let availableHeight = size.height * 0.9
+        let availableWidth = size.width * 0.9
+        
+        let widthBasedHeight = availableWidth * (5.0/3.0)
+        let heightBasedWidth = availableHeight * (3.0/5.0)
+        
+        let finalWidth: CGFloat
+        let finalHeight: CGFloat
+        
+        if widthBasedHeight <= availableHeight {
+            finalWidth = availableWidth
+            finalHeight = widthBasedHeight
+        } else {
+            finalWidth = heightBasedWidth
+            finalHeight = availableHeight
+        }
+        
+        return ZStack {
+            AdaptiveFrameImages(
                 displayedImages: Bindable(viewModel).displayedImages,
                 selectedBackground: viewModel.selectedBackground,
+                frameWidth: finalWidth,
+                frameHeight: finalHeight,
                 showCloseButton: true
             )
-            .frame(width: 300, height: 500)
             .background(Color.white)
             .overlay(
                 Rectangle()
@@ -83,11 +105,11 @@ struct FrameFilterView: View {
             if frameFilterViewModel.selectedFilter != .none {
                 Rectangle()
                     .fill(frameFilterViewModel.selectedFilter.color.opacity(0.3))
-                    .frame(width: 300, height: 500)
+                    .frame(width: finalWidth, height: finalHeight)
                     .blendMode(getBlendMode(for: frameFilterViewModel.selectedFilter))
             }
         }
-        .padding(.vertical, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
     private var selectionSection: some View {
@@ -129,7 +151,6 @@ struct FrameFilterView: View {
     
     @ViewBuilder
     private var frameOptions: some View {
-        // 기본 프레임들
         ForEach(BackgroundModel.defaultBackgrounds, id: \.id) { background in
             FrameOptionButton(
                 background: background,
@@ -141,7 +162,6 @@ struct FrameFilterView: View {
             )
         }
         
-        // 커스텀 프레임들
         ForEach(customFrameService.customFrames, id: \.id) { background in
             CustomFrameOptionButton(
                 background: background,
@@ -151,7 +171,6 @@ struct FrameFilterView: View {
             )
         }
         
-        // 커스텀 프레임 추가 버튼
         Button(action: {
             showingCustomFrameSelection = true
         }) {
@@ -213,7 +232,67 @@ struct FrameFilterView: View {
     }
 }
 
-// Supporting Views
+// MARK: - AdaptiveFrameImages
+struct AdaptiveFrameImages: View {
+    @Binding var displayedImages: [Image?]
+    var selectedBackground: BackgroundModel
+    var frameWidth: CGFloat
+    var frameHeight: CGFloat
+    var showCloseButton: Bool = true
+    
+    var body: some View {
+        ZStack {
+            Color.white.ignoresSafeArea()
+            
+            if selectedBackground.isCustom, let customImage = selectedBackground.customImage {
+                Image(uiImage: customImage)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: frameWidth, height: frameHeight)
+                    .clipped()
+            } else if let imageName = selectedBackground.imageName {
+                Image(imageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: frameWidth, height: frameHeight)
+                    .clipped()
+            }
+            
+            let imageWidth = frameWidth * 0.33
+            let imageHeight = frameHeight * 0.32
+            let spacing: CGFloat = frameWidth * 0.01
+            
+            VStack(spacing: spacing) {
+                ForEach(0..<2, id: \.self) { row in
+                    HStack(spacing: spacing) {
+                        ForEach(0..<2, id: \.self) { column in
+                            let index = row * 2 + column
+                            if index < displayedImages.count, let image = displayedImages[index] {
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: imageWidth, height: imageHeight)
+                                    .clipped()
+                            } else {
+                                Rectangle()
+                                    .fill(Color.gray.opacity(0.6))
+                                    .frame(width: imageWidth, height: imageHeight)
+                            }
+                        }
+                    }
+                }
+                Spacer().frame(height: frameHeight * 0.18)
+            }
+            
+            Rectangle()
+                .stroke(Color.black, lineWidth: max(1, frameWidth / 100))
+                .frame(width: frameWidth, height: frameHeight)
+        }
+        .frame(width: frameWidth, height: frameHeight)
+    }
+}
+
+// MARK: - Supporting Views
 struct TabButton: View {
     let title: String
     let isSelected: Bool
@@ -285,7 +364,6 @@ struct CustomFrameOptionButton: View {
                         )
                 }
                 
-                // 삭제 버튼
                 VStack {
                     HStack {
                         Spacer()
