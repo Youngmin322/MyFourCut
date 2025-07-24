@@ -29,8 +29,8 @@ class CustomFrameService: ObservableObject {
             from: asset,
             targetSize: CGSize(width: 300, height: 500)
         ),
-        let imageData = image.jpegData(compressionQuality: 0.8),
-        let modelContext = modelContext else { return }
+              let imageData = image.jpegData(compressionQuality: 0.8),
+              let modelContext = modelContext else { return }
         
         // SwiftData 모델 생성
         let customFrame = CustomFrame(
