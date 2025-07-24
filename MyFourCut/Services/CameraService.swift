@@ -19,12 +19,12 @@ class CameraService: NSObject {
     private let output = AVCapturePhotoOutput()
     private var photoCompletion: ((UIImage) -> Void)?
     private var rotationCoordinator: AVCaptureDevice.RotationCoordinator?
-
+    
     override init() {
         super.init()
         Task { await setupSession() }
     }
-
+    
     func checkPermissions() async -> Bool {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .notDetermined:
@@ -40,7 +40,7 @@ class CameraService: NSObject {
             return false
         }
     }
-
+    
     func startSession() async {
         if !session.isRunning {
             await Task.detached {
@@ -48,7 +48,7 @@ class CameraService: NSObject {
             }.value
         }
     }
-
+    
     private func setupSession() async {
         await MainActor.run {
             do {
@@ -89,13 +89,13 @@ class CameraService: NSObject {
             }
         }
     }
-
+    
     private func setupRotationCoordinator() {
         if let camera = camera {
             rotationCoordinator = AVCaptureDevice.RotationCoordinator(device: camera, previewLayer: nil)
         }
     }
-
+    
     func switchCamera() {
         guard let currentInput = input else { return }
         let newPosition: AVCaptureDevice.Position = (camera?.position == .front) ? .back : .front
@@ -140,7 +140,7 @@ class CameraService: NSObject {
             }
         }
     }
-
+    
     func capturePhoto(completion: @escaping (UIImage) -> Void) {
         photoCompletion = completion
         let settings = AVCapturePhotoSettings()
@@ -160,7 +160,7 @@ class CameraService: NSObject {
             output.capturePhoto(with: settings, delegate: self)
         }
     }
-
+    
     private func updatePhotoOrientation(connection: AVCaptureConnection) {
         // 메인 스레드에서 UI API 호출 보장
         Task { @MainActor in
@@ -201,20 +201,20 @@ extension CameraService: AVCapturePhotoCaptureDelegate {
             }
         }
     }
-
+    
     // 이미지 방향 수정 메서드 (강제 회전 제거)
     private func correctImageOrientation(_ image: UIImage) -> UIImage {
         // 이미 올바른 방향이면 그대로 반환
         guard image.imageOrientation != .up else {
             return image
         }
-
+        
         // 방향 정규화만 수행 (강제 회전 제거)
         UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
         image.draw(in: CGRect(origin: .zero, size: image.size))
         let fixedImage = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
-
+        
         return fixedImage ?? image
     }
 }

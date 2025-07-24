@@ -17,7 +17,7 @@ struct CameraView: View {
     var body: some View {
         ZStack {
             CameraPreview(session: viewModel.session)
-                .id(previewKey) // 방향 변경 시 프리뷰 재생성
+                .id(previewKey)
                 .ignoresSafeArea()
             
             if viewModel.isCountingDown {
@@ -39,7 +39,7 @@ struct CameraView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
             let newOrientation = UIDevice.current.orientation
             if newOrientation != orientation &&
-               (newOrientation.isPortrait || newOrientation.isLandscape) {
+                (newOrientation.isPortrait || newOrientation.isLandscape) {
                 orientation = newOrientation
                 // 프리뷰 강제 재생성
                 previewKey = UUID()
@@ -241,7 +241,7 @@ class CameraPreviewUIView: UIView {
             name: AVCaptureSession.didStartRunningNotification,
             object: session
         )
-    
+        
         // 초기 방향 설정
         updateVideoOrientation()
     }
@@ -257,7 +257,7 @@ class CameraPreviewUIView: UIView {
     }
     
     private func setupRotationCoordinator() {
-
+        
     }
     
     @objc private func orientationChanged() {
@@ -275,7 +275,7 @@ class CameraPreviewUIView: UIView {
     // 외부에서 호출할 수 있는 방향 업데이트 메서드
     func updateVideoOrientation() {
         guard let connection = previewLayer.connection else { return }
-
+        
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
             switch windowScene.interfaceOrientation {
             case .portrait:
@@ -293,7 +293,7 @@ class CameraPreviewUIView: UIView {
     }
     
     private func updateMirroringForCurrentCamera() {
-
+        
     }
     
     private func getCurrentCameraPosition() -> AVCaptureDevice.Position {
