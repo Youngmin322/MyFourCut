@@ -238,10 +238,10 @@ class CameraPreviewUIView: UIView {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(sessionConfigurationChanged),
-            name: .AVCaptureSessionDidStartRunning,
+            name: AVCaptureSession.didStartRunningNotification,
             object: session
         )
-        
+    
         // 초기 방향 설정
         updateVideoOrientation()
     }
