@@ -40,7 +40,7 @@ struct CustomFrameSelectionView: View {
                         showingNameInput = true
                     }
                 }
-                .disabled(selectedAsset == nil)
+                    .disabled(selectedAsset == nil)
             )
         }
         .onAppear {
@@ -145,8 +145,8 @@ struct CustomFrameSelectionView: View {
         
         return ZStack {
             PhotoAssetView(asset: asset,
-                          size: CGSize(width: (UIScreen.main.bounds.width - 8) / 3,
-                                     height: (UIScreen.main.bounds.width - 8) / 3))
+                           size: CGSize(width: (UIScreen.main.bounds.width - 8) / 3,
+                                        height: (UIScreen.main.bounds.width - 8) / 3))
             
             if isSelected {
                 Rectangle()

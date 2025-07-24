@@ -33,26 +33,26 @@ class ImageProcessingService {
         selectedFilter: FilterType
     ) -> UIImage? {
         let renderer = ImageRenderer(content:
-            ZStack {
-                FrameImages(
-                    displayedImages: .constant(displayedImages),
-                    selectedBackground: selectedBackground,
-                    showCloseButton: false
-                )
-                .frame(width: 300, height: 500)
-                .background(Color.white)
-                .overlay(
-                    Rectangle()
-                        .stroke(Color.black, lineWidth: 1)
-                )
-                
-                if selectedFilter != .none {
-                    Rectangle()
-                        .fill(selectedFilter.color.opacity(0.3))
-                        .frame(width: 300, height: 500)
-                        .blendMode(getBlendMode(for: selectedFilter))
-                }
+                                        ZStack {
+            FrameImages(
+                displayedImages: .constant(displayedImages),
+                selectedBackground: selectedBackground,
+                showCloseButton: false
+            )
+            .frame(width: 300, height: 500)
+            .background(Color.white)
+            .overlay(
+                Rectangle()
+                    .stroke(Color.black, lineWidth: 1)
+            )
+            
+            if selectedFilter != .none {
+                Rectangle()
+                    .fill(selectedFilter.color.opacity(0.3))
+                    .frame(width: 300, height: 500)
+                    .blendMode(getBlendMode(for: selectedFilter))
             }
+        }
         )
         renderer.scale = UIScreen.main.scale
         return renderer.uiImage
