@@ -50,7 +50,15 @@ class CameraService: NSObject {
         do {
             session.beginConfiguration()
             
-            camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
+            if session.canSetSessionPreset(.photo) {
+                session.sessionPreset = .photo
+            }
+            
+            if let trueDepthCamera = AVCaptureDevice.default(.builtInTrueDepthCamera, for: .video, position: .front) {
+                camera = trueDepthCamera
+            } else {
+                camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
+            }
             
             if let camera {
                 input = try AVCaptureDeviceInput(device: camera)
@@ -65,12 +73,9 @@ class CameraService: NSObject {
                 // 회전 코디네이터 설정
                 setupRotationCoordinator()
                 
-                // 회전 설정
+                // 연결 설정 - 초기에는 포트레이트로 설정
                 if let connection = output.connection(with: .video) {
-                    let rotationAngle: CGFloat = 0
-                    if connection.isVideoRotationAngleSupported(rotationAngle) {
-                        connection.videoRotationAngle = rotationAngle
-                    }
+                    connection.videoRotationAngle = 0 // 포트레이트
                 }
             }
             
@@ -91,8 +96,22 @@ class CameraService: NSObject {
         let newPosition: AVCaptureDevice.Position = (camera?.position == .front) ? .back : .front
         
         Task {
-            guard let newCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: newPosition),
-                  let newInput = try? AVCaptureDeviceInput(device: newCamera) else { return }
+            var newCamera: AVCaptureDevice?
+            
+            if newPosition == .front {
+                // 전면: TrueDepth 카메라 우선, 없으면 일반 전면 카메라
+                if let trueDepthCamera = AVCaptureDevice.default(.builtInTrueDepthCamera, for: .video, position: .front) {
+                    newCamera = trueDepthCamera
+                } else {
+                    newCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
+                }
+            } else {
+                // 후면: 일반 후면 카메라
+                newCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
+            }
+            
+            guard let selectedCamera = newCamera,
+                  let newInput = try? AVCaptureDeviceInput(device: selectedCamera) else { return }
             
             await MainActor.run {
                 session.beginConfiguration()
@@ -101,7 +120,7 @@ class CameraService: NSObject {
                 if session.canAddInput(newInput) {
                     session.addInput(newInput)
                     input = newInput
-                    camera = newCamera
+                    camera = selectedCamera
                     
                     // 새 카메라로 회전 코디네이터 업데이트
                     setupRotationCoordinator()
@@ -132,8 +151,22 @@ class CameraService: NSObject {
     }
     
     private func getRotationAngleForCurrentOrientation() -> CGFloat {
-        let orientation = UIDevice.current.orientation
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            switch windowScene.interfaceOrientation {
+            case .portrait:
+                return 0
+            case .portraitUpsideDown:
+                return 180
+            case .landscapeLeft:
+                return -90
+            case .landscapeRight:
+                return 90
+            default:
+                return 0
+            }
+        }
         
+        let orientation = UIDevice.current.orientation
         switch orientation {
         case .portrait:
             return 0
@@ -144,23 +177,7 @@ class CameraService: NSObject {
         case .landscapeRight:
             return -90
         default:
-            // 알 수 없는 방향일 때는 인터페이스 방향을 기준으로 설정
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                switch windowScene.interfaceOrientation {
-                case .portrait:
-                    return 0
-                case .portraitUpsideDown:
-                    return 180
-                case .landscapeLeft:
-                    return -90
-                case .landscapeRight:
-                    return 90
-                default:
-                    return 0
-                }
-            } else {
-                return 0
-            }
+            return 0
         }
     }
 }
@@ -169,9 +186,28 @@ extension CameraService: AVCapturePhotoCaptureDelegate {
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
         if let imageData = photo.fileDataRepresentation(),
            let image = UIImage(data: imageData) {
+            
+            // 이미지 방향을 올바르게 수정
+            let correctedImage = correctImageOrientation(image)
+            
             Task { @MainActor in
-                self.photoCompletion?(image)
+                self.photoCompletion?(correctedImage)
             }
         }
+    }
+    
+    // 이미지 방향 수정 메서드 추가
+    private func correctImageOrientation(_ image: UIImage) -> UIImage {
+        // 이미 올바른 방향이면 그대로 반환
+        if image.imageOrientation == .up {
+            return image
+        }
+        
+        UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
+        image.draw(in: CGRect(origin: .zero, size: image.size))
+        let correctedImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        
+        return correctedImage ?? image
     }
 }
