@@ -80,6 +80,7 @@ class CameraViewModel {
             guard let self = self else { return }
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
+                // CameraService에서 이미 방향 처리를 했으므로 그대로 사용
                 let photo = PhotoModel(uiImage: image)
                 if self.frameModel.addPhoto(photo) {
                     if !self.frameModel.isComplete {
@@ -172,6 +173,7 @@ class CameraViewModel {
             guard let self = self else { return }
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
+                // CameraService에서 이미 방향 처리를 했으므로 그대로 사용
                 let photo = PhotoModel(uiImage: image)
                 if self.frameModel.addPhoto(photo) {
                     if !isManual && !self.frameModel.isComplete {
