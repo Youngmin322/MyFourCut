@@ -141,7 +141,7 @@ struct PhotoSelectionView: View {
     
     private var selectedPhotosDisplay: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("최소 4장의 사진을 선택해 주세요. (\(viewModel.selectedAssets.count)/8)")
+            Text("사진을 4장 이상 선택해 주세요. (\(viewModel.selectedAssets.count)/8)")
                 .font(.system(size: 14))
                 .foregroundColor(.black)
                 .padding(.horizontal)
