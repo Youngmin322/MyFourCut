@@ -166,22 +166,22 @@ class CameraService: NSObject {
         Task { @MainActor in
             // 현재 인터페이스 방향에 맞게 정확한 방향 설정
             if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                let orientation: AVCaptureVideoOrientation
+                let rotationAngle: Double
                 switch windowScene.interfaceOrientation {
                 case .portrait:
-                    orientation = .portrait
+                    rotationAngle = 0.0
                 case .portraitUpsideDown:
-                    orientation = .portraitUpsideDown
+                    rotationAngle = 180.0
                 case .landscapeLeft:
-                    orientation = .landscapeLeft
+                    rotationAngle = 270.0
                 case .landscapeRight:
-                    orientation = .landscapeRight
+                    rotationAngle = 90.0
                 default:
-                    orientation = .portrait
+                    rotationAngle = 0.0
                 }
                 
-                if connection.isVideoOrientationSupported {
-                    connection.videoOrientation = orientation
+                if connection.isVideoRotationAngleSupported(rotationAngle) {
+                    connection.videoRotationAngle = rotationAngle
                 }
             }
         }

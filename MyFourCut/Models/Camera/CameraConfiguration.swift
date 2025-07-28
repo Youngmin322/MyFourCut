@@ -18,3 +18,4 @@ struct CameraConfiguration {
         photoSettings: AVCapturePhotoSettings()
     )
 }
+

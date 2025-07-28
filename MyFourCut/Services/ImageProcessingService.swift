@@ -58,7 +58,6 @@ class ImageProcessingService {
         return renderer.uiImage
     }
     
-    // 기존 메서드: 호환성을 위해 유지 (deprecated)
     func renderFrameImage(
         displayedImages: [Image?],
         backgroundImage: String?,
