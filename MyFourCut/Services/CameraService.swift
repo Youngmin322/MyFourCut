@@ -143,7 +143,6 @@ class CameraService: NSObject {
     
     func capturePhoto(completion: @escaping (UIImage) -> Void) {
         photoCompletion = completion
-        let settings = AVCapturePhotoSettings()
         
         // 현재 디바이스 방향에 따라 사진 방향 설정
         if let connection = output.connection(with: .video) {
@@ -151,12 +150,14 @@ class CameraService: NSObject {
             Task { @MainActor in
                 self.updatePhotoOrientation(connection: connection)
                 
+                let settings = AVCapturePhotoSettings()
                 // 방향 설정 후 사진 촬영
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    self.output.capturePhoto(with: settings, delegate: self)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [self] in
+                    output.capturePhoto(with: settings, delegate: self)
                 }
             }
         } else {
+            let settings = AVCapturePhotoSettings()
             output.capturePhoto(with: settings, delegate: self)
         }
     }
