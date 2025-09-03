@@ -277,17 +277,38 @@ class CameraPreviewUIView: UIView {
         guard let connection = previewLayer.connection else { return }
         
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            let rotationAngle: CGFloat
+            
             switch windowScene.interfaceOrientation {
             case .portrait:
-                connection.videoOrientation = .portrait
+                rotationAngle = 0
             case .portraitUpsideDown:
-                connection.videoOrientation = .portraitUpsideDown
+                rotationAngle = 180
             case .landscapeLeft:
-                connection.videoOrientation = .landscapeLeft
+                rotationAngle = 90
             case .landscapeRight:
-                connection.videoOrientation = .landscapeRight
+                rotationAngle = 270
             default:
-                connection.videoOrientation = .portrait
+                rotationAngle = 0
+            }
+            
+            // iOS 17+ 에서는 videoRotationAngle 사용
+            if #available(iOS 17.0, *) {
+                connection.videoRotationAngle = rotationAngle
+            } else {
+                // iOS 17 미만에서는 기존 videoOrientation 사용
+                switch windowScene.interfaceOrientation {
+                case .portrait:
+                    connection.videoOrientation = .portrait
+                case .portraitUpsideDown:
+                    connection.videoOrientation = .portraitUpsideDown
+                case .landscapeLeft:
+                    connection.videoOrientation = .landscapeLeft
+                case .landscapeRight:
+                    connection.videoOrientation = .landscapeRight
+                default:
+                    connection.videoOrientation = .portrait
+                }
             }
         }
     }
@@ -312,9 +333,9 @@ class CameraPreviewUIView: UIView {
             case .portraitUpsideDown:
                 return 180
             case .landscapeLeft:
-                return -90
+                return 270  // landscapeLeft는 반시계방향이므로 270도
             case .landscapeRight:
-                return 90
+                return 90   // landscapeRight는 시계방향이므로 90도
             default:
                 return 0
             }
@@ -328,9 +349,9 @@ class CameraPreviewUIView: UIView {
         case .portraitUpsideDown:
             return 180
         case .landscapeLeft:
-            return 90
+            return 270
         case .landscapeRight:
-            return -90
+            return 90
         default:
             return 0
         }
