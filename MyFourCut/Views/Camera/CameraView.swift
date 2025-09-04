@@ -1,5 +1,5 @@
 //
-//  CameraView.swift (완전한 디버깅 버전)
+//  CameraView.swift
 //  MyFourCut
 //
 
@@ -17,20 +17,6 @@ struct CameraView: View {
         ZStack {
             CameraPreview(session: viewModel.session)
                 .ignoresSafeArea()
-            
-            VStack {
-                HStack {
-                    Text("Device: \(getOrientationString(orientation))")
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.black.opacity(0.6))
-                        .cornerRadius(8)
-                    Spacer()
-                }
-                Spacer()
-            }
-            .padding()
             
             if viewModel.isCountingDown {
                 countdownOverlay
@@ -84,19 +70,6 @@ struct CameraView: View {
             if viewModel.cameraAccessDenied {
                 cameraAccessDeniedOverlay
             }
-        }
-    }
-    
-    // 디버깅용 함수
-    private func getOrientationString(_ orientation: UIDeviceOrientation) -> String {
-        switch orientation {
-        case .portrait: return "Portrait"
-        case .portraitUpsideDown: return "Portrait ↓"
-        case .landscapeLeft: return "Landscape ←"
-        case .landscapeRight: return "Landscape →"
-        case .faceUp: return "Face Up"
-        case .faceDown: return "Face Down"
-        default: return "Unknown"
         }
     }
     
@@ -200,19 +173,14 @@ struct CameraPreview: UIViewRepresentable {
     let session: AVCaptureSession
     
     func makeUIView(context: Context) -> CameraPreviewUIView {
-        print("🏗️ Creating CameraPreviewUIView")
         let view = CameraPreviewUIView(session: session)
         return view
     }
     
     func updateUIView(_ uiView: CameraPreviewUIView, context: Context) {
-        print("🔄 Updating CameraPreviewUIView")
         if uiView.previewLayer.session != session {
             uiView.previewLayer.session = session
-            print("📹 Session updated")
         }
-        // 수동으로 디버그 정보 출력
-        uiView.printDebugInfo()
     }
 }
 
@@ -235,69 +203,11 @@ class CameraPreviewUIView: UIView {
         previewLayer.session = session
         previewLayer.videoGravity = .resizeAspectFill
         
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(orientationChanged),
-            name: UIDevice.orientationDidChangeNotification,
-            object: nil
-        )
-        
         print("🏗️ CameraPreviewUIView initialized")
-    }
-    
-    @objc private func sessionDidStartRunning() {
-        print("📹 Session started running - checking initial state")
-        DispatchQueue.main.async {
-            self.debugConnectionState("Session Start")
-        }
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-    
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        let oldFrame = previewLayer.frame
-        previewLayer.frame = bounds
-        
-        if oldFrame != bounds {
-            print("🖼️ PreviewLayer frame changed: \(oldFrame) → \(bounds)")
-            debugConnectionState("Layout")
-        }
-    }
-    
-    @objc private func orientationChanged() {
-        print("🔄 Orientation change detected")
-        DispatchQueue.main.async {
-            self.debugConnectionState("Orientation Change")
-        }
-    }
-    
-    private func debugConnectionState(_ context: String) {
-        if let connection = previewLayer.connection {
-        } else {
-            print("PreviewLayer connection is nil")
-        }
-        
-        for (index, output) in session.outputs.enumerated() {
-            
-            if let photoOutput = output as? AVCapturePhotoOutput,
-               let connection = photoOutput.connection(with: .video) {
-            }
-            
-            if let videoOutput = output as? AVCaptureVideoDataOutput,
-               let connection = videoOutput.connection(with: .video) {
-            }
-        }
-        for (index, input) in session.inputs.enumerated() {
-            if let deviceInput = input as? AVCaptureDeviceInput {
-                let device = deviceInput.device
-            }
-        }
-        
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-         }
     }
     
     private func getOrientationName(_ orientation: UIDeviceOrientation) -> String {
@@ -320,10 +230,6 @@ class CameraPreviewUIView: UIView {
         case .landscapeRight: return "LandscapeRight"
         default: return "Unknown"
         }
-    }
-    
-    func printDebugInfo() {
-        debugConnectionState("Manual Call")
     }
     
     deinit {
