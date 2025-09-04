@@ -1,8 +1,6 @@
 //
-//  CameraService.swift
+//  CameraService.swift (최종 해결책)
 //  MyFourCut
-//
-//  Created by 조영민 on 7/14/25.
 //
 
 import AVFoundation
@@ -58,6 +56,7 @@ class CameraService: NSObject {
                     session.sessionPreset = .photo
                 }
                 
+                // 전면 카메라를 기본으로 설정
                 if let trueDepthCamera = AVCaptureDevice.default(.builtInTrueDepthCamera, for: .video, position: .front) {
                     camera = trueDepthCamera
                 } else {
@@ -72,18 +71,19 @@ class CameraService: NSObject {
                     
                     if session.canAddOutput(output) {
                         session.addOutput(output)
+                        
+                        // 핵심: 출력 설정 최적화 - 기본값 그대로 두기
+                        if let connection = output.connection(with: .video) {
+                            // 미러링만 설정하고 회전은 건드리지 않음
+                            connection.isVideoMirrored = (camera.position == .front)
+                            print("초기 설정 - 미러링: \(connection.isVideoMirrored), 회전: \(connection.videoRotationAngle)°")
+                        }
                     }
                     
-                    // 회전 코디네이터 설정
                     setupRotationCoordinator()
                 }
                 
                 session.commitConfiguration()
-                
-                // commitConfiguration 후에 방향 설정
-                if let connection = output.connection(with: .video) {
-                    updatePhotoOrientation(connection: connection)
-                }
             } catch {
                 print("카메라 설정 오류: \(error.localizedDescription)")
             }
@@ -104,14 +104,12 @@ class CameraService: NSObject {
             var newCamera: AVCaptureDevice?
             
             if newPosition == .front {
-                // 전면: TrueDepth 카메라 우선, 없으면 일반 전면 카메라
                 if let trueDepthCamera = AVCaptureDevice.default(.builtInTrueDepthCamera, for: .video, position: .front) {
                     newCamera = trueDepthCamera
                 } else {
                     newCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
                 }
             } else {
-                // 후면: 일반 후면 카메라
                 newCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
             }
             
@@ -127,12 +125,11 @@ class CameraService: NSObject {
                     input = newInput
                     camera = selectedCamera
                     
-                    // 새 카메라로 회전 코디네이터 업데이트
                     setupRotationCoordinator()
                     
-                    // 카메라 전환 후 방향 다시 설정
+                    // 미러링 및 방향 설정 업데이트
                     if let connection = output.connection(with: .video) {
-                        updatePhotoOrientation(connection: connection)
+                        connection.isVideoMirrored = (selectedCamera.position == .front)
                     }
                 }
                 
@@ -143,49 +140,8 @@ class CameraService: NSObject {
     
     func capturePhoto(completion: @escaping (UIImage) -> Void) {
         photoCompletion = completion
-        
-        // 현재 디바이스 방향에 따라 사진 방향 설정
-        if let connection = output.connection(with: .video) {
-            // 메인 스레드에서 방향 업데이트
-            Task { @MainActor in
-                self.updatePhotoOrientation(connection: connection)
-                
-                let settings = AVCapturePhotoSettings()
-                // 방향 설정 후 사진 촬영
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [self] in
-                    output.capturePhoto(with: settings, delegate: self)
-                }
-            }
-        } else {
-            let settings = AVCapturePhotoSettings()
-            output.capturePhoto(with: settings, delegate: self)
-        }
-    }
-    
-    private func updatePhotoOrientation(connection: AVCaptureConnection) {
-        // 메인 스레드에서 UI API 호출 보장
-        Task { @MainActor in
-            // 현재 인터페이스 방향에 맞게 정확한 방향 설정
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                let rotationAngle: Double
-                switch windowScene.interfaceOrientation {
-                case .portrait:
-                    rotationAngle = 0.0
-                case .portraitUpsideDown:
-                    rotationAngle = 180.0
-                case .landscapeLeft:
-                    rotationAngle = 270.0
-                case .landscapeRight:
-                    rotationAngle = 90.0
-                default:
-                    rotationAngle = 0.0
-                }
-                
-                if connection.isVideoRotationAngleSupported(rotationAngle) {
-                    connection.videoRotationAngle = rotationAngle
-                }
-            }
-        }
+        let settings = AVCapturePhotoSettings()
+        output.capturePhoto(with: settings, delegate: self)
     }
 }
 
@@ -194,28 +150,10 @@ extension CameraService: AVCapturePhotoCaptureDelegate {
         if let imageData = photo.fileDataRepresentation(),
            let image = UIImage(data: imageData) {
             
-            // 이미지 방향을 올바르게 수정 (강제 회전 제거)
-            let correctedImage = correctImageOrientation(image)
-            
+            // 가장 간단한 방법: 원본 이미지 그대로 사용
             Task { @MainActor in
-                self.photoCompletion?(correctedImage)
+                self.photoCompletion?(image)
             }
         }
-    }
-    
-    // 이미지 방향 수정 메서드 (강제 회전 제거)
-    private func correctImageOrientation(_ image: UIImage) -> UIImage {
-        // 이미 올바른 방향이면 그대로 반환
-        guard image.imageOrientation != .up else {
-            return image
-        }
-        
-        // 방향 정규화만 수행 (강제 회전 제거)
-        UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
-        image.draw(in: CGRect(origin: .zero, size: image.size))
-        let fixedImage = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-        
-        return fixedImage ?? image
     }
 }

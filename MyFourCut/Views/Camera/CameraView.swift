@@ -1,5 +1,5 @@
 //
-//  CameraView.swift
+//  CameraView.swift (완전한 디버깅 버전)
 //  MyFourCut
 //
 
@@ -12,13 +12,25 @@ struct CameraView: View {
     @Binding var displayedImages: [Image?]
     @Environment(\.dismiss) var dismiss
     @State private var orientation = UIDevice.current.orientation
-    @State private var previewKey = UUID() // 프리뷰 강제 재생성용
     
     var body: some View {
         ZStack {
             CameraPreview(session: viewModel.session)
-                .id(previewKey)
                 .ignoresSafeArea()
+            
+            VStack {
+                HStack {
+                    Text("Device: \(getOrientationString(orientation))")
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.black.opacity(0.6))
+                        .cornerRadius(8)
+                    Spacer()
+                }
+                Spacer()
+            }
+            .padding()
             
             if viewModel.isCountingDown {
                 countdownOverlay
@@ -38,21 +50,16 @@ struct CameraView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
             let newOrientation = UIDevice.current.orientation
+            
             if newOrientation != orientation &&
                 (newOrientation.isPortrait || newOrientation.isLandscape) {
                 orientation = newOrientation
-                // 프리뷰 강제 재생성
-                previewKey = UUID()
             }
         }
         .onAppear {
-            // 카메라 화면에서는 모든 방향 허용
             if let delegate = UIApplication.shared.delegate as? AppDelegate {
                 delegate.setOrientationLock(.all)
             }
-        }
-        .onDisappear {
-            
         }
         .navigationDestination(isPresented: $viewModel.shouldNavigateToContent) {
             ContentView(initialImages: viewModel.displayedImages)
@@ -77,6 +84,19 @@ struct CameraView: View {
             if viewModel.cameraAccessDenied {
                 cameraAccessDeniedOverlay
             }
+        }
+    }
+    
+    // 디버깅용 함수
+    private func getOrientationString(_ orientation: UIDeviceOrientation) -> String {
+        switch orientation {
+        case .portrait: return "Portrait"
+        case .portraitUpsideDown: return "Portrait ↓"
+        case .landscapeLeft: return "Landscape ←"
+        case .landscapeRight: return "Landscape →"
+        case .faceUp: return "Face Up"
+        case .faceDown: return "Face Down"
+        default: return "Unknown"
         }
     }
     
@@ -110,7 +130,6 @@ struct CameraView: View {
     
     private var cameraControlSection: some View {
         HStack(spacing: 60) {
-            // 닫기 버튼
             Button {
                 HapticService.shared.impact(.medium)
                 dismiss()
@@ -120,7 +139,6 @@ struct CameraView: View {
                     .foregroundColor(.white)
             }
             
-            // 사진 촬영 버튼
             Button {
                 viewModel.capturePhoto()
             } label: {
@@ -134,7 +152,6 @@ struct CameraView: View {
                     )
             }
             
-            // 카메라 전환 버튼
             Button {
                 viewModel.switchCamera()
             } label: {
@@ -183,31 +200,23 @@ struct CameraPreview: UIViewRepresentable {
     let session: AVCaptureSession
     
     func makeUIView(context: Context) -> CameraPreviewUIView {
+        print("🏗️ Creating CameraPreviewUIView")
         let view = CameraPreviewUIView(session: session)
         return view
     }
     
     func updateUIView(_ uiView: CameraPreviewUIView, context: Context) {
-        // 세션이 변경되었을 때만 업데이트
+        print("🔄 Updating CameraPreviewUIView")
         if uiView.previewLayer.session != session {
             uiView.previewLayer.session = session
+            print("📹 Session updated")
         }
-        
-        // 방향과 미러링을 항상 업데이트
-        uiView.updateRotationCoordinator()
-        
-        // 약간의 지연 후 다시 한번 업데이트 (비동기 처리 보장)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            uiView.updateVideoOrientation()
-        }
-    }
-    
-    // 추가: 수동으로 방향 업데이트하는 메서드
-    func updateOrientation(_ uiView: CameraPreviewUIView) {
-        uiView.updateVideoOrientation()
+        // 수동으로 디버그 정보 출력
+        uiView.printDebugInfo()
     }
 }
 
+// 근본 원인 파악을 위한 상세 디버깅
 class CameraPreviewUIView: UIView {
     private let session: AVCaptureSession
     
@@ -226,7 +235,6 @@ class CameraPreviewUIView: UIView {
         previewLayer.session = session
         previewLayer.videoGravity = .resizeAspectFill
         
-        // 디바이스 회전 감지
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(orientationChanged),
@@ -234,16 +242,14 @@ class CameraPreviewUIView: UIView {
             object: nil
         )
         
-        // 카메라 전환 감지 (세션 변경 감지)
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(sessionConfigurationChanged),
-            name: AVCaptureSession.didStartRunningNotification,
-            object: session
-        )
-        
-        // 초기 방향 설정
-        updateVideoOrientation()
+        print("🏗️ CameraPreviewUIView initialized")
+    }
+    
+    @objc private func sessionDidStartRunning() {
+        print("📹 Session started running - checking initial state")
+        DispatchQueue.main.async {
+            self.debugConnectionState("Session Start")
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -252,95 +258,72 @@ class CameraPreviewUIView: UIView {
     
     override func layoutSubviews() {
         super.layoutSubviews()
+        let oldFrame = previewLayer.frame
         previewLayer.frame = bounds
-        updateVideoOrientation()
-    }
-    
-    private func setupRotationCoordinator() {
         
+        if oldFrame != bounds {
+            print("🖼️ PreviewLayer frame changed: \(oldFrame) → \(bounds)")
+            debugConnectionState("Layout")
+        }
     }
     
     @objc private func orientationChanged() {
+        print("🔄 Orientation change detected")
         DispatchQueue.main.async {
-            self.updateVideoOrientation()
+            self.debugConnectionState("Orientation Change")
         }
     }
     
-    @objc private func sessionConfigurationChanged() {
-        DispatchQueue.main.async {
-            self.updateMirroringForCurrentCamera()
+    private func debugConnectionState(_ context: String) {
+        if let connection = previewLayer.connection {
+        } else {
+            print("PreviewLayer connection is nil")
         }
-    }
-    
-    // 외부에서 호출할 수 있는 방향 업데이트 메서드
-    func updateVideoOrientation() {
-        guard let connection = previewLayer.connection else { return }
         
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            switch windowScene.interfaceOrientation {
-            case .portrait:
-                connection.videoOrientation = .portrait
-            case .portraitUpsideDown:
-                connection.videoOrientation = .portraitUpsideDown
-            case .landscapeLeft:
-                connection.videoOrientation = .landscapeLeft
-            case .landscapeRight:
-                connection.videoOrientation = .landscapeRight
-            default:
-                connection.videoOrientation = .portrait
+        for (index, output) in session.outputs.enumerated() {
+            
+            if let photoOutput = output as? AVCapturePhotoOutput,
+               let connection = photoOutput.connection(with: .video) {
+            }
+            
+            if let videoOutput = output as? AVCaptureVideoDataOutput,
+               let connection = videoOutput.connection(with: .video) {
             }
         }
-    }
-    
-    private func updateMirroringForCurrentCamera() {
-        
-    }
-    
-    private func getCurrentCameraPosition() -> AVCaptureDevice.Position {
-        guard let input = session.inputs.first as? AVCaptureDeviceInput else {
-            return .unspecified
-        }
-        return input.device.position
-    }
-    
-    private func getRotationAngleForCurrentOrientation() -> CGFloat {
-        // 현재 인터페이스 방향을 기준으로 회전 각도 계산
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            switch windowScene.interfaceOrientation {
-            case .portrait:
-                return 0
-            case .portraitUpsideDown:
-                return 180
-            case .landscapeLeft:
-                return -90
-            case .landscapeRight:
-                return 90
-            default:
-                return 0
+        for (index, input) in session.inputs.enumerated() {
+            if let deviceInput = input as? AVCaptureDeviceInput {
+                let device = deviceInput.device
             }
         }
         
-        // 백업으로 디바이스 방향 사용
-        let orientation = UIDevice.current.orientation
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+         }
+    }
+    
+    private func getOrientationName(_ orientation: UIDeviceOrientation) -> String {
         switch orientation {
-        case .portrait:
-            return 0
-        case .portraitUpsideDown:
-            return 180
-        case .landscapeLeft:
-            return 90
-        case .landscapeRight:
-            return -90
-        default:
-            return 0
+        case .portrait: return "Portrait"
+        case .portraitUpsideDown: return "PortraitUpsideDown"
+        case .landscapeLeft: return "LandscapeLeft"
+        case .landscapeRight: return "LandscapeRight"
+        case .faceUp: return "FaceUp"
+        case .faceDown: return "FaceDown"
+        default: return "Unknown"
         }
     }
     
-    // 세션이 변경될 때 회전 코디네이터를 다시 설정하는 메서드
-    func updateRotationCoordinator() {
-        setupRotationCoordinator()
-        updateVideoOrientation()
-        updateMirroringForCurrentCamera()
+    private func getInterfaceOrientationName(_ orientation: UIInterfaceOrientation) -> String {
+        switch orientation {
+        case .portrait: return "Portrait"
+        case .portraitUpsideDown: return "PortraitUpsideDown"
+        case .landscapeLeft: return "LandscapeLeft"
+        case .landscapeRight: return "LandscapeRight"
+        default: return "Unknown"
+        }
+    }
+    
+    func printDebugInfo() {
+        debugConnectionState("Manual Call")
     }
     
     deinit {
